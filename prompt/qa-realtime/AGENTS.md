@@ -1,6 +1,7 @@
 # AGENTS.md — QA Realtime
 
 > Đọc [`prompt/AGENTS.md`](../AGENTS.md) trước. File này chỉ nói phần riêng của vai trò QA Realtime.
+> **Hợp đồng API (implement đúng theo):** [`../../docs/qa-realtime-api.md`](../../docs/qa-realtime-api.md)
 
 ## Vai trò
 **Hai việc ghép lại:** xây tính năng real-time **và** là chốt kiểm soát chất lượng (ký Definition of Done).
