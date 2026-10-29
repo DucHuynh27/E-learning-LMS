@@ -44,5 +44,6 @@ jobs:
           sed -i 's/^DB_USERNAME=.*/DB_USERNAME=lms/' .env
           sed -i 's/^DB_NAME=.*/DB_NAME=lms/' .env
       - name: Bật hạ tầng
-        run: docker compose up -d postgres redis minio && sleep 10
+        # e2e hiện chỉ cần Postgres. Sẽ bổ sung redis/minio khi test cần dùng.
+        run: docker compose up -d postgres && sleep 10
       - run: pnpm test:e2e
