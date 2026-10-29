@@ -57,13 +57,52 @@ Modular Monolith — mỗi domain là một module độc lập, **mỗi module 
 
 ## Setup
 
-```bash
-# hạ tầng (Postgres, Redis, MinIO, Bull Board)
-cd backend && docker compose up -d
+**Yêu cầu:** Node.js 24+, `pnpm`, và Podman hoặc Docker kèm Compose.
 
-# backend
+```bash
+# 1. Cài dependencies
+cd backend
 pnpm install
-pnpm run start:dev
+
+# 2. Tạo file môi trường từ mẫu (giá trị mặc định đã đủ cho dev local)
+cp .env.example .env
+
+# 3. Khởi động hạ tầng (Postgres, Redis, MinIO, Bull Board)
+podman-compose -f docker-compose.yml up -d      # hoặc: docker compose up -d
+
+# 4. Chạy migration để tạo schema
+pnpm migration:run
+
+# 5. Chạy backend ở chế độ watch
+pnpm start:dev
+```
+
+API mặc định ở `http://localhost:3000`.
+
+### Cổng dịch vụ
+
+| Dịch vụ | Cổng host | Ghi chú |
+|---|---|---|
+| PostgreSQL (`lms-postgres`) | **5433** | Cố tình lệch khỏi `5432` để không đụng Postgres local của máy |
+| Redis | 6379 | |
+| MinIO API / Console | 9000 / 9001 | |
+| Bull Board | 3001 | Dashboard debug queue |
+
+> Nếu máy bạn **không** có Postgres nào chiếm `5432`, có thể đổi `DB_PORT=5432` trong `.env` cho tiện. Đây là biến duy nhất cần sửa.
+> Lưu ý Podman: các image trong `docker-compose.yml` đã được qualify `docker.io/...` để chạy được trên cả Podman lẫn Docker.
+
+### Lệnh thường dùng
+
+```bash
+pnpm start:dev                       # dev server (watch)
+pnpm lint                            # oxlint
+pnpm test                            # unit test (vitest)
+pnpm test:e2e                        # e2e test (vitest)
+pnpm build                           # build production
+
+pnpm migration:generate src/database/migrations/<Ten>   # sinh migration từ entity
+pnpm migration:run                   # áp dụng migration
+pnpm migration:revert                # rollback migration gần nhất
 ```
 
 Chi tiết backend xem tại [`backend/README.md`](backend/README.md).
