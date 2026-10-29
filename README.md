@@ -62,6 +62,48 @@ Modular Monolith — mỗi domain là một module độc lập, **mỗi module 
 | [`docs/`](docs/README.md) | Mỗi người tự viết phần giải thích module mình phụ trách (chứng minh độ hiểu code) |
 | [`prompt/`](prompt/AGENTS.md) | Prompt onboarding cho AI agent — điểm vào là `prompt/AGENTS.md` |
 
+## Quy trình làm việc cho thành viên
+
+### 1. Cài đặt lần đầu
+Theo mục [Setup](#setup) bên dưới: clone → `pnpm install` → `cp .env.example .env` → `compose up -d` → `pnpm migration:run`.
+
+### 2. Vào việc trên branch của mình
+
+| Branch | Owner |
+| --- | --- |
+| `feat/auth` | @lead |
+| `feat/content` | @content |
+| `feat/media` | @media |
+| `feat/learning` | @learning |
+| `feat/realtime` | @qa |
+
+```bash
+git switch feat/<module> && git pull
+# ... code ...
+pnpm lint && pnpm test && pnpm test:e2e
+git add -A && git commit -m "feat(<module>): ..."
+git push
+```
+
+### 3. Đọc prompt trước khi code
+- Đọc `prompt/AGENTS.md` rồi `prompt/<vai-trò>/AGENTS.md`.
+- Nói với AI: *"Đọc `prompt/AGENTS.md` và `prompt/<vai-trò>/AGENTS.md` trước khi code."*
+
+### 4. Mở PR (`main` được bảo vệ)
+- Không push trực tiếp `main`; phải qua PR + **1 review** + CI xanh.
+- `gh pr create --base main --head feat/<module> --fill`.
+- PR đụng cross-cutting (auth/config/base entity) cần **@lead** duyệt.
+
+### 5. Definition of Done mỗi task
+- API chạy · unit test (dev) · e2e (qa) xanh · phân quyền đúng role.
+- Tick trạng thái trong `TASKLIST.md`, cập nhật `docs/<module>.md`.
+
+### 6. Khi `main` đổi
+```bash
+git switch main && git pull
+git switch feat/<module> && git merge main
+```
+
 ## Setup
 
 **Yêu cầu:** Node.js 24+, `pnpm`, và Podman hoặc Docker kèm Compose.
