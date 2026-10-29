@@ -1,0 +1,5 @@
+# Cấu hình pnpm cho dự án.
+# pnpm 12 yêu cầu khai báo tường minh dependency nào được phép chạy build script.
+# esbuild cần postinstall để cài binary — thiếu khai báo này, CI sẽ fail với ERR_PNPM_IGNORED_BUILDS.
+allowBuilds:
+  esbuild: true
