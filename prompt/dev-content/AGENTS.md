@@ -1,6 +1,7 @@
 # AGENTS.md — Dev Content
 
 > Đọc [`prompt/AGENTS.md`](../AGENTS.md) trước. File này chỉ nói phần riêng của vai trò Dev Content.
+> **Hợp đồng API (implement đúng theo):** [`../../docs/catalog-api.md`](../../docs/catalog-api.md)
 
 ## Vai trò
 Sở hữu domain **nội dung khóa học** — người gỡ phụ thuộc cho mọi người (ai cũng cần `Course`/`Lesson`).
@@ -28,6 +29,6 @@ Sở hữu domain **nội dung khóa học** — người gỡ phụ thuộc cho
 CRUD khóa học chạy + phân quyền đúng role + e2e xanh (QA ký).
 
 ## TODO (đào sâu sau)
-- [ ] Route spec chi tiết (method + path + quyền)
-- [ ] DTO cho từng endpoint
-- [ ] Quy tắc publish khóa (điều kiện gì thì cho PUBLISHED)
+- [x] Route spec chi tiết (method + path + quyền) → [`../../docs/catalog-api.md`](../../docs/catalog-api.md)
+- [x] DTO cho từng endpoint → cùng file
+- [x] Quy tắc publish khóa (điều kiện gì thì cho PUBLISHED) → cùng file

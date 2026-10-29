@@ -2,6 +2,8 @@
 
 > Owner: @content · Điền theo [`_TEMPLATE.md`](_TEMPLATE.md)
 
+**Hợp đồng API:** endpoint/DTO/response đã chốt tại [`catalog-api.md`](catalog-api.md).
+
 ## Phạm vi
 `CoursesModule` · `SectionsModule` · `LessonsModule` · `EnrolmentsModule`
 

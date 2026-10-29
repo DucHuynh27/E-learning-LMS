@@ -17,3 +17,11 @@ Mục đích: mỗi người viết **một file giải thích module mình ph�
 | [`media.md`](media.md) | @media | Uploads/Media/Bull/S3 | ⬜ |
 | [`learning.md`](learning.md) | @learning | Progress/Certificates/Quizzes/Attempts | ⬜ |
 | [`qa-realtime.md`](qa-realtime.md) | @qa | QnA/Notifications/WsGateway + e2e | ⬜ |
+
+## Hợp đồng API (spec)
+
+Spec giao diện chốt **trước khi code** — nguồn sự thật cho dev, QA và AI:
+
+| File | Owner | Module |
+|---|---|---|
+| [`catalog-api.md`](catalog-api.md) | @content | Catalog & Enrolment |
