@@ -46,7 +46,7 @@ services:
   # 3. MINIO - "Kho chứa" S3-compatible cho video
   # ============================================
   minio:
-    image: docker.io/minio/minio:latest
+    image: docker.io/elestio/minio:latest
     container_name: lms-minio
     restart: unless-stopped
     environment:
