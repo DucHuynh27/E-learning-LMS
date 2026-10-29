@@ -56,15 +56,17 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 
 **Exit criteria:** login JWT chạy · tạo được Course/Lesson qua API đúng RBAC · e2e xanh.
 
-- ⬜ EnvVars validate (class-validator) + app crash nếu thiếu biến — `@lead`
-- ⬜ Cross-cutting `main.ts`: ValidationPipe · Serializer/Transform interceptor · ExceptionFilter · versioning — `@lead`
-- ⬜ AuthModule: login/refresh, argon2, JwtStrategy, RolesGuard, `@Roles`, `@CurrentUser` — `@lead`
-- ⬜ UsersModule hoàn chỉnh: service + controller + DTO — `@lead`
+- ✅ EnvVars validate (class-validator) + app crash nếu thiếu biến — `@lead`
+- ✅ Cross-cutting `main.ts`: ValidationPipe · Serializer/Transform interceptor · ExceptionFilter · versioning — `@lead`
+- ✅ AuthModule: login/refresh, argon2, JwtStrategy, RolesGuard, `@Roles`, `@CurrentUser` — `@lead`
+- ✅ UsersModule hoàn chỉnh: service + DTO (`findByEmail`/`findByEmailForAuth`) — `@lead`
 - ⬜ Entity Course/Section/Lesson + migration — `@content`
 - ⬜ CRUD Course/Lesson + phân trang — `@content`
 - ⬜ Entity Enrolment + enroll (chỉ khóa PUBLISHED) — `@content`
-- ⬜ Test DB riêng cho e2e + e2e skeleton — `@qa`
+- 🔄 Test DB riêng cho e2e — skeleton xong (`configureApp`), **DB test riêng chưa** — `@qa`
 - ⬜ Spike: upload 1 file lên MinIO qua presigned URL — `@media`
+
+> **Đã xong ngoài danh sách (nền tảng, trước/đầu Sprint 1):** TypeORM DataSource + migration baseline · CI (lint/unit/e2e) + branch protection · hạ tầng compose (Postgres 5433, Redis, MinIO, Bull Board) · README / TASKLIST / docs / prompt.
 
 ## Sprint 2 — Progress + Media + Quiz core (Tuần 2)
 
