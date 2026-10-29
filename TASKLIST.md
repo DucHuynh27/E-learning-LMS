@@ -11,7 +11,7 @@ Kế hoạch thực thi E-Learning LMS trong **3 tuần** (mỗi người ~20h/t
 
 ## Quy ước
 
-- Trạng thái: ⬜ chưa làm · 🔄 đang làm · ✅ xong.
+- Trạng thái: `- [ ]` chưa làm · `- [ ]` + **(đang làm)** đang làm · `- [x]` xong.
 - Owner ghi bằng **handle**; tra cứu ở bảng dưới.
 - Sprint kết thúc khi đạt **exit criteria**, không cứng theo ngày (độ dài tùy độ khó).
 - Mỗi PR cập nhật trạng thái trong file này.
@@ -56,15 +56,15 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 
 **Exit criteria:** login JWT chạy · tạo được Course/Lesson qua API đúng RBAC · e2e xanh.
 
-- ✅ EnvVars validate (class-validator) + app crash nếu thiếu biến — `@lead`
-- ✅ Cross-cutting `main.ts`: ValidationPipe · Serializer/Transform interceptor · ExceptionFilter · versioning — `@lead`
-- ✅ AuthModule: login/refresh, argon2, JwtStrategy, RolesGuard, `@Roles`, `@CurrentUser` — `@lead`
-- ✅ UsersModule hoàn chỉnh: service + DTO (`findByEmail`/`findByEmailForAuth`) — `@lead`
-- ⬜ Entity Course/Section/Lesson + migration — `@content`
-- ⬜ CRUD Course/Lesson + phân trang — `@content`
-- ⬜ Entity Enrolment + enroll (chỉ khóa PUBLISHED) — `@content`
-- 🔄 Test DB riêng cho e2e — skeleton xong (`configureApp`), **DB test riêng chưa** — `@qa`
-- ⬜ Spike: upload 1 file lên MinIO qua presigned URL — `@media`
+- [x] EnvVars validate (class-validator) + app crash nếu thiếu biến — `@lead`
+- [x] Cross-cutting `main.ts`: ValidationPipe · Serializer/Transform interceptor · ExceptionFilter · versioning — `@lead`
+- [x] AuthModule: login/refresh, argon2, JwtStrategy, RolesGuard, `@Roles`, `@CurrentUser` — `@lead`
+- [x] UsersModule hoàn chỉnh: service + DTO (`findByEmail`/`findByEmailForAuth`) — `@lead`
+- [ ] Entity Course/Section/Lesson + migration — `@content`
+- [ ] CRUD Course/Lesson + phân trang — `@content`
+- [ ] Entity Enrolment + enroll (chỉ khóa PUBLISHED) — `@content`
+- [ ] Test DB riêng cho e2e — skeleton xong (`configureApp`), **DB test riêng chưa** — **(đang làm)** `@qa`
+- [ ] Spike: upload 1 file lên MinIO qua presigned URL — `@media`
 
 > **Đã xong ngoài danh sách (nền tảng, trước/đầu Sprint 1):** TypeORM DataSource + migration baseline · CI (lint/unit/e2e) + branch protection · hạ tầng compose (Postgres 5433, Redis, MinIO, Bull Board) · README / TASKLIST / docs / prompt.
 
@@ -72,27 +72,27 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 
 **Exit criteria:** % tiến độ cập nhật đúng · video hiện diện `READY` (hoặc upload+serve) · nộp quiz ra điểm.
 
-- ⬜ Entity LessonProgress + PATCH progress (ngưỡng 0.9) — `@learning`
-- ⬜ Tính `progressPct` + update Enrolment (nêu rõ lý do index) — `@learning`
-- ⬜ Entity Quiz/Question/Option + tạo quiz — `@learning`
-- ⬜ Entity QuizAttempt/QuizAnswer + API nộp bài, chấm server-side — `@learning`
-- ⬜ S3Module (MinIO `forcePathStyle`) + UploadsModule — `@media`
-- ⬜ MediaModule: lưu metadata + serve presigned GET — `@media`
-- ⬜ BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`
-- ⬜ e2e cho progress + quiz — `@qa`
-- ⬜ Hỗ trợ + review + gỡ chặn — `@lead`
+- [ ] Entity LessonProgress + PATCH progress (ngưỡng 0.9) — `@learning`
+- [ ] Tính `progressPct` + update Enrolment (nêu rõ lý do index) — `@learning`
+- [ ] Entity Quiz/Question/Option + tạo quiz — `@learning`
+- [ ] Entity QuizAttempt/QuizAnswer + API nộp bài, chấm server-side — `@learning`
+- [ ] S3Module (MinIO `forcePathStyle`) + UploadsModule — `@media`
+- [ ] MediaModule: lưu metadata + serve presigned GET — `@media`
+- [ ] BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`
+- [ ] e2e cho progress + quiz — `@qa`
+- [ ] Hỗ trợ + review + gỡ chặn — `@lead`
 
 ## Sprint 3 — Certificate + Realtime + Hardening (Tuần 3)
 
 **Exit criteria:** đạt 100% phát chứng chỉ (record + trang tra cứu) · Q&A realtime tối thiểu · demo chạy end-to-end.
 
-- ⬜ Certificate: entity + tự phát khi `progressPct == 100` (idempotent) + HTML tra cứu — `@learning`
-- ⬜ Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa`
-- ⬜ HealthModule (Postgres/Redis/MinIO) — `@learning`
-- ⬜ Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
-- ⬜ e2e toàn hệ + script demo — `@qa`
-- ⬜ Mỗi người: viết `docs/<module>.md` giải thích kiến trúc module mình — **cả nhóm**
-- ⬜ Push origin + bật branch protection — `@lead`
+- [ ] Certificate: entity + tự phát khi `progressPct == 100` (idempotent) + HTML tra cứu — `@learning`
+- [ ] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa`
+- [ ] HealthModule (Postgres/Redis/MinIO) — `@learning`
+- [ ] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
+- [ ] e2e toàn hệ + script demo — `@qa`
+- [ ] Mỗi người: viết `docs/<module>.md` giải thích kiến trúc module mình — **cả nhóm**
+- [x] Push origin + bật branch protection — `@lead`
 
 ## Đã cắt (không làm trong 3 tuần)
 - Transcode HLS đa bitrate + ffmpeg
