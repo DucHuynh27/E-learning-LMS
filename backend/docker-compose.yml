@@ -1,0 +1,107 @@
+services:
+  # ============================================
+  # 1. POSTGRESQL - "Bộ não" lưu trữ dữ liệu
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: lms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - '${DB_PORT}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME} -d ${DB_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lms-network
+
+  # ============================================
+  # 2. REDIS - "Bộ nhớ ngắn hạn" cho Queue & Cache
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: lms-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    ports:
+      - '${REDIS_PORT}:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - lms-network
+
+  # ============================================
+  # 3. MINIO - "Kho chứa" S3-compatible cho video
+  # ============================================
+  minio:
+    image: minio/minio:latest
+    container_name: lms-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    ports:
+      - '${MINIO_API_PORT}:9000' # API endpoint
+      - '${MINIO_CONSOLE_PORT}:9001' # Web UI
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lms-network
+
+  # ============================================
+  # 4. BULL BOARD - "Dashboard" để debug Queue
+  # ============================================
+  # Dùng để demo cho giảng viên: thấy rõ job nào đang chạy, job nào fail
+  bull-board:
+    image: deadly0/bull-board
+    container_name: lms-bull-board
+    restart: unless-stopped
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      BOARD_PASSWORD: ${BULL_BOARD_PASSWORD}
+    ports:
+      - '${BULL_BOARD_PORT}:3000'
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - lms-network
+
+# ============================================
+# VOLUMES - Persist data qua mọi lần restart
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+# ============================================
+# NETWORK - Các container "nói chuyện" với nhau
+# qua hostname (postgres, redis, minio)
+# ============================================
+networks:
+  lms-network:
+    driver: bridge
