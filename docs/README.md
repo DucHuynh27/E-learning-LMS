@@ -25,3 +25,6 @@ Spec giao diện chốt **trước khi code** — nguồn sự thật cho dev, Q
 | File | Owner | Module |
 |---|---|---|
 | [`catalog-api.md`](catalog-api.md) | @content | Catalog & Enrolment |
+| [`media-api.md`](media-api.md) | @media | Uploads / Media / Queue |
+| [`learning-api.md`](learning-api.md) | @learning | Progress / Quiz / Certificate |
+| [`qa-realtime-api.md`](qa-realtime-api.md) | @qa | Q&A realtime / Notifications |
