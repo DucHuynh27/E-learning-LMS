@@ -12,9 +12,19 @@ Kế hoạch thực thi E-Learning LMS trong **3 tuần** (mỗi người ~20h/t
 ## Quy ước
 
 - Trạng thái: ⬜ chưa làm · 🔄 đang làm · ✅ xong.
-- Owner: `@lead` · `@content` · `@media` · `@learning` · `@qa`.
+- Owner ghi bằng **handle**; tra cứu ở bảng dưới.
 - Sprint kết thúc khi đạt **exit criteria**, không cứng theo ngày (độ dài tùy độ khó).
 - Mỗi PR cập nhật trạng thái trong file này.
+
+### Handle → người → prompt
+
+| Handle | Thành viên | Prompt |
+| --- | --- | --- |
+| `@lead` | Huỳnh Kim Đức | [`prompt/lead/`](prompt/lead/AGENTS.md) |
+| `@content` | _(điền tên)_ | [`prompt/dev-content/`](prompt/dev-content/AGENTS.md) |
+| `@media` | _(điền tên)_ | [`prompt/dev-media/`](prompt/dev-media/AGENTS.md) |
+| `@learning` | _(điền tên)_ | [`prompt/dev-learning/`](prompt/dev-learning/AGENTS.md) |
+| `@qa` | _(điền tên)_ | [`prompt/qa-realtime/`](prompt/qa-realtime/AGENTS.md) |
 
 ## Phân loại scope
 

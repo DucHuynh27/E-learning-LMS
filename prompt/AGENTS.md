@@ -19,13 +19,15 @@ xử lý video, tracking tiến độ học tập, Q&A real-time, và làm bài 
 
 ## 3. Đội ngũ & quyền sở hữu module
 
-| Vai trò | Folder prompt | Module sở hữu |
-|---|---|---|
-| **Lead** (kiêm PM/PO/BA) | [`prompt/lead/`](lead/AGENTS.md) | `TypeOrmModule`, `ConfigModule`, `AuthModule`, `UsersModule`, cross-cutting (pipes/filters/interceptors), Swagger |
-| **Dev Content** | [`prompt/dev-content/`](dev-content/AGENTS.md) | `CoursesModule`, `SectionsModule`, `LessonsModule`, `EnrolmentsModule` |
-| **Dev Media** | [`prompt/dev-media/`](dev-media/AGENTS.md) | `UploadsModule`, `MediaModule`, `BullModule`, `S3Module`, transcode worker |
-| **Dev Learning** | [`prompt/dev-learning/`](dev-learning/AGENTS.md) | `ProgressModule`, `CertificatesModule`, `QuizzesModule`, `AttemptsModule` |
-| **QA Realtime** | [`prompt/qa-realtime/`](qa-realtime/AGENTS.md) | `QnaModule`, `NotificationsModule`, `WsGateway` + toàn bộ e2e test |
+| Handle | Vai trò | Folder prompt | Module sở hữu |
+|---|---|---|---|
+| `@lead` | **Lead** (kiêm PM/PO/BA) | [`prompt/lead/`](lead/AGENTS.md) | `TypeOrmModule`, `ConfigModule`, `AuthModule`, `UsersModule`, cross-cutting (pipes/filters/interceptors), Swagger |
+| `@content` | **Dev Content** | [`prompt/dev-content/`](dev-content/AGENTS.md) | `CoursesModule`, `SectionsModule`, `LessonsModule`, `EnrolmentsModule` |
+| `@media` | **Dev Media** | [`prompt/dev-media/`](dev-media/AGENTS.md) | `UploadsModule`, `MediaModule`, `BullModule`, `S3Module`, transcode worker |
+| `@learning` | **Dev Learning** | [`prompt/dev-learning/`](dev-learning/AGENTS.md) | `ProgressModule`, `CertificatesModule`, `QuizzesModule`, `AttemptsModule` |
+| `@qa` | **QA Realtime** | [`prompt/qa-realtime/`](qa-realtime/AGENTS.md) | `QnaModule`, `NotificationsModule`, `WsGateway` + toàn bộ e2e test |
+
+> Các **handle** trên được dùng trong [`TASKLIST.md`](../TASKLIST.md) để gán owner cho từng task.
 
 > **Nguyên tắc vàng:** không sửa file ngoài module của mình. Cần thay đổi cross-cutting (auth, config, base entity) → yêu cầu **Lead**.
 
