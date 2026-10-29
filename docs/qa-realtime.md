@@ -2,6 +2,8 @@
 
 > Owner: @qa · Điền theo [`_TEMPLATE.md`](_TEMPLATE.md)
 
+**Hợp đồng API:** endpoint/DTO/response + WS event đã chốt tại [`qa-realtime-api.md`](qa-realtime-api.md).
+
 ## Phạm vi
 `QnaModule` · `NotificationsModule` · `WsGateway` · **toàn bộ e2e test**
 
