@@ -99,6 +99,13 @@ Lộ trình 6 phase (chi tiết ở `README.md`):
 | 5. Realtime Q&A & Notifications | Socket.io, room theo course | QA Realtime |
 | 6. Hardening | Rate limit, caching, observability, e2e | Cả nhóm |
 
-**Phase 0 — hiện trạng:**
-- ✅ TypeORM DataSource + migration baseline, Config cơ bản, `User` entity/module (khung), hạ tầng docker, CI (lint/unit/e2e).
-- ⬜ Config validate (`EnvVars`), cross-cutting toàn cục (`ValidationPipe`, interceptors, exception filter, Swagger), `AuthModule` + RBAC, `UsersModule` hoàn chỉnh, Bull/S3 module, Health module, test DB riêng cho e2e, branch protection.
+**Phase 0 — đã xong:**
+- ✅ TypeORM DataSource + migration baseline (bảng `users`)
+- ✅ Config validate (`EnvVars`) + cross-cutting toàn cục (`ValidationPipe`, interceptors, exception filter, URI versioning `/v1`)
+- ✅ AuthModule + RBAC (JWT access/refresh, `RolesGuard`, `@Roles`, `@CurrentUser`) và UsersModule (service + DTO)
+- ✅ CI (lint/unit/e2e) + branch protection
+- ✅ Hạ tầng compose (Postgres 5433, Redis, MinIO, Bull Board)
+
+**Phase 0 — còn lại:**
+- ⬜ `BullModule` + `S3Module` (`@media`), `HealthModule` (`@learning`), test DB riêng cho e2e (`@qa`)
+- ⬜ Swagger (đang hoãn — chưa cần cho mục tiêu hiện tại)

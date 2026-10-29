@@ -1,6 +1,7 @@
 # AGENTS.md — Dev Learning
 
 > Đọc [`prompt/AGENTS.md`](../AGENTS.md) trước. File này chỉ nói phần riêng của vai trò Dev Learning.
+> **Hợp đồng API (implement đúng theo):** [`../../docs/learning-api.md`](../../docs/learning-api.md)
 
 ## Vai trò
 Sở hữu logic nghiệp vụ dày nhất: **tiến độ học tập + chứng chỉ + quiz**.
