@@ -1,6 +1,7 @@
 # AGENTS.md — Dev Media
 
 > Đọc [`prompt/AGENTS.md`](../AGENTS.md) trước. File này chỉ nói phần riêng của vai trò Dev Media.
+> **Hợp đồng API (implement đúng theo):** [`../../docs/media-api.md`](../../docs/media-api.md)
 
 ## Vai trò
 Sở hữu hạ tầng **xử lý video** — module rủi ro cao nhất dự án.

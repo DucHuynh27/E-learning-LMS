@@ -2,6 +2,8 @@
 
 > Owner: @learning · Điền theo [`_TEMPLATE.md`](_TEMPLATE.md)
 
+**Hợp đồng API:** endpoint/DTO/response đã chốt tại [`learning-api.md`](learning-api.md).
+
 ## Phạm vi
 `ProgressModule` · `CertificatesModule` · `QuizzesModule` · `AttemptsModule`
 

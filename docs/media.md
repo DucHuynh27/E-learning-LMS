@@ -2,6 +2,8 @@
 
 > Owner: @media · Điền theo [`_TEMPLATE.md`](_TEMPLATE.md)
 
+**Hợp đồng API:** endpoint/DTO/response đã chốt tại [`media-api.md`](media-api.md).
+
 ## Phạm vi
 `UploadsModule` · `MediaModule` · `BullModule` · `S3Module` · worker
 
