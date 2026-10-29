@@ -3,7 +3,7 @@ services:
   # 1. POSTGRESQL - "Bộ não" lưu trữ dữ liệu
   # ============================================
   postgres:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     container_name: lms-postgres
     restart: unless-stopped
     environment:
@@ -26,7 +26,7 @@ services:
   # 2. REDIS - "Bộ nhớ ngắn hạn" cho Queue & Cache
   # ============================================
   redis:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     container_name: lms-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
@@ -46,7 +46,7 @@ services:
   # 3. MINIO - "Kho chứa" S3-compatible cho video
   # ============================================
   minio:
-    image: minio/minio:latest
+    image: docker.io/minio/minio:latest
     container_name: lms-minio
     restart: unless-stopped
     environment:
@@ -71,7 +71,7 @@ services:
   # ============================================
   # Dùng để demo cho giảng viên: thấy rõ job nào đang chạy, job nào fail
   bull-board:
-    image: deadly0/bull-board
+    image: docker.io/deadly0/bull-board
     container_name: lms-bull-board
     restart: unless-stopped
     environment:
