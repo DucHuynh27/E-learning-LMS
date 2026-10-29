@@ -31,6 +31,11 @@ export class EnvVars {
 
   @IsString() @IsNotEmpty() BULL_BOARD_PASSWORD: string;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) BULL_BOARD_PORT: number;
+
+  @IsString() @IsNotEmpty() JWT_ACCESS_SECRET: string;
+  @IsString() @IsNotEmpty() JWT_REFRESH_SECRET: string;
+  @Type(() => Number) @IsInt() @Min(1) JWT_ACCESS_TTL: number;
+  @Type(() => Number) @IsInt() @Min(1) JWT_REFRESH_TTL: number;
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvVars {
