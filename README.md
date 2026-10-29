@@ -30,8 +30,7 @@ Modular Monolith — mỗi domain là một module độc lập, **mỗi module 
 
 ### Rủi ro đã biết — module Media (Dev 2)
 
-- Ưu tiên người có nền hạ tầng tốt nhất (đã có).
-- Nếu chưa ai có kinh nghiệm ffmpeg/S3: **pair với Lead** + nhờ hỗ trợ giảng viên.
+- Kinh nghiệm ffmpeg/S3: **pair với Lead** + nhờ hỗ trợ giảng viên.
 - Media là module rủi ro cao nhất → cần spike sớm ở Phase 2, không để tới cuối.
 
 ## Roadmap theo giai đoạn
@@ -54,6 +53,14 @@ Modular Monolith — mỗi domain là một module độc lập, **mỗi module 
 - **Definition of Done**: API chạy + e2e xanh + phân quyền đúng role, **QA ký**.
 - **Test ownership**: Dev viết unit/integration; QA viết e2e.
 - **Demo cuối tuần**: mỗi người show 1 endpoint thật + test tương ứng.
+
+## Tài liệu & điều phối
+
+| Tài liệu | Nội dung |
+| --- | --- |
+| [`TASKLIST.md`](TASKLIST.md) | Chia việc theo sprint, phân loại scope MUST/SHOULD/CẮT, exit criteria mỗi sprint |
+| [`docs/`](docs/README.md) | Mỗi người tự viết phần giải thích module mình phụ trách (chứng minh độ hiểu code) |
+| [`prompt/`](prompt/AGENTS.md) | Prompt onboarding cho AI agent — điểm vào là `prompt/AGENTS.md` |
 
 ## Setup
 
@@ -81,12 +88,12 @@ API mặc định ở `http://localhost:3000`.
 
 ### Cổng dịch vụ
 
-| Dịch vụ | Cổng host | Ghi chú |
-|---|---|---|
-| PostgreSQL (`lms-postgres`) | **5433** | Cố tình lệch khỏi `5432` để không đụng Postgres local của máy |
-| Redis | 6379 | |
-| MinIO API / Console | 9000 / 9001 | |
-| Bull Board | 3001 | Dashboard debug queue |
+| Dịch vụ                     | Cổng host   | Ghi chú                                                       |
+| --------------------------- | ----------- | ------------------------------------------------------------- |
+| PostgreSQL (`lms-postgres`) | **5433**    | Cố tình lệch khỏi `5432` để không đụng Postgres local của máy |
+| Redis                       | 6379        |                                                               |
+| MinIO API / Console         | 9000 / 9001 |                                                               |
+| Bull Board                  | 3001        | Dashboard debug queue                                         |
 
 > Nếu máy bạn **không** có Postgres nào chiếm `5432`, có thể đổi `DB_PORT=5432` trong `.env` cho tiện. Đây là biến duy nhất cần sửa.
 > Lưu ý Podman: các image trong `docker-compose.yml` đã được qualify `docker.io/...` để chạy được trên cả Podman lẫn Docker.
