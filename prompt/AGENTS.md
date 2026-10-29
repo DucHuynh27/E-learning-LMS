@@ -67,6 +67,13 @@ pnpm migration:run
 pnpm migration:revert
 ```
 
+### 4.6 Code style & comment
+- **Comment chỉ khi lý do không hiển nhiên từ code** (nói *why*, không *what*). Không viết `// khởi tạo biến`, `// trả về kết quả`.
+- Không comment "rác AI": nhắc lại tên hàm, tiêu đề trang trí, giải thích điều code đã nói rõ.
+- Ưu tiên **đặt tên tốt + code rõ ràng** hơn là comment dài dòng.
+- Tránh "AI slop": không boilerplate thừa, không class/file rỗng, không dựng abstraction khi chưa cần.
+- Mỗi dòng phải **giải thích được khi bị hỏi** — tiêu chí chấm là độ hiểu code.
+
 ## 5. Quy ước Git & quy trình
 
 - **Branch theo module:** `feat/auth`, `feat/content`, `feat/media`, `feat/learning`, `feat/realtime`; nhánh phụ `fix/<...>`, `chore/<...>`.
