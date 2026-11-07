@@ -14,6 +14,8 @@
     "start:dev": "nest start --watch --env-file .env",
     "start:debug": "nest start --debug --watch --env-file .env",
     "start:prod": "node dist/main",
+    "demo:seed": "npm run build && node --env-file=.env scripts/seed-learning-demo.mjs",
+    "demo:start": "node --env-file=.env scripts/start-learning-demo.mjs",
     "lint": "oxlint --type-aware src/ test/",
     "test": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run",
     "test:watch": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs",

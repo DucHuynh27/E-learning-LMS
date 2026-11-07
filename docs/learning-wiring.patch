@@ -1,0 +1,17 @@
+diff --git a/backend/src/app.module.ts b/backend/src/app.module.ts
+index 84a1034..9c7e536 100644
+--- a/backend/src/app.module.ts
++++ b/backend/src/app.module.ts
+@@ -10,0 +11 @@ import { UserModule } from './user/user.module.js';
++import { LearningModule } from './learning/learning.module.js';
+@@ -29,0 +31 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
++    LearningModule,
+diff --git a/backend/src/database/data-source.ts b/backend/src/database/data-source.ts
+index d191adf..78cb040 100644
+--- a/backend/src/database/data-source.ts
++++ b/backend/src/database/data-source.ts
+@@ -3,0 +4 @@ import { join } from 'node:path';
++import { LEARNING_ENTITIES } from '../learning/learning.entities.js';
+@@ -13 +14 @@ export const AppDataSource = new DataSource({
+-  entities: [User /*, Course, Lesson, Enrolment... */],
++  entities: [User, ...LEARNING_ENTITIES /*, Course, Lesson, Enrolment... */],

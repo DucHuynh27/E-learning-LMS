@@ -72,23 +72,25 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 
 **Exit criteria:** % tiến độ cập nhật đúng · video hiện diện `READY` (hoặc upload+serve) · nộp quiz ra điểm.
 
-- [ ] Entity LessonProgress + PATCH progress (ngưỡng 0.9) — `@learning`
-- [ ] Tính `progressPct` + update Enrolment (nêu rõ lý do index) — `@learning`
-- [ ] Entity Quiz/Question/Option + tạo quiz — `@learning`
-- [ ] Entity QuizAttempt/QuizAnswer + API nộp bài, chấm server-side — `@learning`
+- [ ] Entity LessonProgress + PATCH progress (ngưỡng 0.9) — **implementation + unit/integration xong; chờ tích hợp/QA** `@learning`
+- [ ] Tính `progressPct` + update Enrolment (nêu rõ lý do index) — **implementation + unit/integration xong; chờ tích hợp/QA** `@learning`
+- [ ] Entity Quiz/Question/Option + tạo quiz — **implementation + unit/integration xong; chờ tích hợp/QA** `@learning`
+- [ ] Entity QuizAttempt/QuizAnswer + API nộp bài, chấm server-side — **implementation + unit/integration xong; chờ tích hợp/QA** `@learning`
 - [ ] S3Module (MinIO `forcePathStyle`) + UploadsModule — `@media`
 - [ ] MediaModule: lưu metadata + serve presigned GET — `@media`
 - [ ] BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`
 - [ ] e2e cho progress + quiz — `@qa`
 - [ ] Hỗ trợ + review + gỡ chặn — `@lead`
 
+> Bàn giao Learning: xem [`docs/learning.md`](docs/learning.md) và [`docs/learning-wiring.patch`](docs/learning-wiring.patch). Wiring đã được áp dụng để chạy demo; cần Lead review `AppModule`/`DataSource`, Content cung cấp schema thật và QA xác nhận e2e trước khi tick Done.
+
 ## Sprint 3 — Certificate + Realtime + Hardening (Tuần 3)
 
 **Exit criteria:** đạt 100% phát chứng chỉ (record + trang tra cứu) · Q&A realtime tối thiểu · demo chạy end-to-end.
 
-- [ ] Certificate: entity + tự phát khi `progressPct == 100` (idempotent) + HTML tra cứu — `@learning`
+- [ ] Certificate: entity + tự phát khi học đủ mọi lesson published (idempotent) + HTML tra cứu — **implementation + unit/integration xong; chờ tích hợp/QA** `@learning`
 - [ ] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa`
-- [ ] HealthModule (Postgres/Redis/MinIO) — `@learning`
+- [ ] HealthModule (Postgres/Redis/MinIO) — **implementation + wiring + unit/probe local xong; chờ QA e2e** `@learning`
 - [ ] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
 - [ ] e2e toàn hệ + script demo — `@qa`
 - [ ] Mỗi người: viết `docs/<module>.md` giải thích kiến trúc module mình — **cả nhóm**
