@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { join } from 'node:path';
+import { LEARNING_ENTITIES } from '../learning/learning.entities.js';
 import { User } from '../user/user.entity.js'; // import tường minh, tránh glob-ESM
 
 export const AppDataSource = new DataSource({
@@ -10,7 +11,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [User /*, Course, Lesson, Enrolment... */],
+  entities: [User, ...LEARNING_ENTITIES /*, Course, Lesson, Enrolment... */],
   migrations: [join(import.meta.dirname, 'migrations', '*.{ts,js}')],
   synchronize: false, // KHÔNG bao giờ true
 });
