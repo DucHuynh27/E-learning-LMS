@@ -71,13 +71,17 @@ export class PublishedLessonCache {
       let offset = 0;
       let replies = 0;
       let settled = false;
+      let deadline: ReturnType<typeof setTimeout> | undefined;
       const finish = (value: string | null | undefined) => {
         if (settled) return;
         settled = true;
+        clearTimeout(deadline);
         socket.destroy();
         resolve(value);
       };
-      socket.setTimeout(500, () => finish(undefined));
+      // An idle timeout alone can be extended forever by a partial reply stream.
+      deadline = setTimeout(() => finish(undefined), 500);
+      deadline.unref();
       socket.on('error', () => finish(undefined));
       socket.on('close', () => finish(undefined));
       socket.on('connect', () => {

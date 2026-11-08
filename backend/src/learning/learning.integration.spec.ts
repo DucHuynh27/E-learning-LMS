@@ -216,6 +216,39 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       expect(await certificates.mine(student.userId)).toHaveLength(0);
     });
 
+    it('regression: a stale high cache count cannot undo a completed enrolment', async () => {
+      for (const lessonId of lessons.slice(0, 2))
+        await progress.update(student, lessonId, { watchedSec: 90 });
+      const completed = await enrolment();
+      const issued = await certificates.mine(student.userId);
+      vi.spyOn(cache, 'get').mockResolvedValue(50);
+      await progress.update(student, lessons[0], { watchedSec: 90 });
+      expect(await enrolment()).toMatchObject({
+        progressPct: 100,
+        status: 'COMPLETED',
+        completedAt: completed.completedAt,
+      });
+      expect(await certificates.mine(student.userId)).toEqual(issued);
+    });
+
+    it('recalculates a completed course after another lesson is published', async () => {
+      for (const lessonId of lessons.slice(0, 2))
+        await progress.update(student, lessonId, { watchedSec: 90 });
+      const issued = await certificates.mine(student.userId);
+      await source.query(
+        'UPDATE "lessons" SET "isPublished" = true WHERE "id" = $1',
+        [lessons[2]],
+      );
+      vi.spyOn(cache, 'get').mockResolvedValue(2);
+      await progress.update(student, lessons[0], { watchedSec: 90 });
+      expect(await enrolment()).toMatchObject({
+        progressPct: 67,
+        status: 'ACTIVE',
+        completedAt: null,
+      });
+      expect(await certificates.mine(student.userId)).toEqual(issued);
+    });
+
     it('does not certify a rounded 199/200 completion ratio', async () => {
       await source.query(
         'INSERT INTO "lessons" SELECT gen_random_uuid(), $1, n, 100, true FROM generate_series(3, 200) n',
@@ -299,6 +332,46 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       await expect(
         quizzes.create(teacher, lessons[0], quizInput(), true),
       ).rejects.toMatchObject({ status: 409 });
+    });
+
+    it('regression: reads quiz metadata and questions from one consistent snapshot', async () => {
+      await newQuiz();
+      const forLesson = quizzes.forLesson.bind(quizzes);
+      vi.spyOn(quizzes, 'forLesson').mockImplementationOnce(async (...args) => {
+        const quiz = await forLesson(...args);
+        await quizzes.create(
+          teacher,
+          lessons[0],
+          {
+            passScore: 95,
+            questions: [
+              {
+                content: 'Replacement?',
+                options: [
+                  { content: 'Yes', isCorrect: true },
+                  { content: 'No', isCorrect: false },
+                ],
+              },
+            ],
+          },
+          true,
+        );
+        return quiz;
+      });
+      const snapshot = await quizzes.get(student, lessons[0]);
+      expect(snapshot.passScore).toBe(70);
+      expect(snapshot.questions.map((question) => question.content)).toEqual([
+        'First?',
+        'Second?',
+      ]);
+      expect(
+        snapshot.questions.every((question) => question.options.length === 2),
+      ).toBe(true);
+      const latest = await quizzes.get(student, lessons[0]);
+      expect(latest.passScore).toBe(95);
+      expect(latest.questions.map((question) => question.content)).toEqual([
+        'Replacement?',
+      ]);
     });
 
     it('requires enrolled students to start an attempt', async () => {
@@ -386,11 +459,9 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       await quizzes.create(teacher, lessons[0], quizInput(0));
       for (let index = 0; index < 3; index++) {
         const attempt = await attempts.start(student, lessons[0]);
-        await source
-          .getRepository(QuizAttempt)
-          .update(attempt.attemptId, {
-            startedAt: new Date(Date.now() - 86400000),
-          });
+        await source.getRepository(QuizAttempt).update(attempt.attemptId, {
+          startedAt: new Date(Date.now() - 86400000),
+        });
         expect(
           await attempts.submit(student, attempt.attemptId, { answers: [] }),
         ).toMatchObject({ score: 0, passed: false });
@@ -437,14 +508,12 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
         code: '23505',
       });
       await expect(
-        source
-          .getRepository(Option)
-          .insert({
-            questionId: quiz.questions[0].id,
-            content: 'Another correct option',
-            position: 2,
-            isCorrect: true,
-          }),
+        source.getRepository(Option).insert({
+          questionId: quiz.questions[0].id,
+          content: 'Another correct option',
+          position: 2,
+          isCorrect: true,
+        }),
       ).rejects.toMatchObject({ code: '23505' });
     });
 

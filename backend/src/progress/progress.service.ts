@@ -60,7 +60,7 @@ export class ProgressService {
         user.userId,
         lesson.courseId,
         enrolment.id,
-        completed && !previous?.completed,
+        (completed && !previous?.completed) || enrolment.status === 'COMPLETED',
       );
       return new LessonProgressResponse(progress);
     });

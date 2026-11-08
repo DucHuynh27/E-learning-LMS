@@ -75,4 +75,22 @@ describe('Published lesson Redis cache adapter', () => {
     };
     expect(await cache.get('fixture')).toBeUndefined();
   });
+
+  it('regression: bounds a connection that keeps streaming partial replies', async () => {
+    let serverEnded = false;
+    respond = (socket) => {
+      const stream = setInterval(() => socket.write('+'), 25);
+      const end = setTimeout(() => {
+        serverEnded = true;
+        socket.end();
+      }, 1200);
+      socket.on('error', () => {});
+      socket.once('close', () => {
+        clearInterval(stream);
+        clearTimeout(end);
+      });
+    };
+    expect(await cache.get('fixture')).toBeUndefined();
+    expect(serverEnded).toBe(false);
+  });
 });

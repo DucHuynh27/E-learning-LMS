@@ -27,14 +27,17 @@ export class QuizzesService {
   ) {}
 
   async get(user: AuthenticatedUser, lessonId: string): Promise<QuizResponse> {
-    const lesson = await this.catalog.lesson(lessonId);
-    if (
-      user.role !== Role.ADMIN &&
-      !(user.role === Role.INSTRUCTOR && user.userId === lesson.instructorId)
-    )
-      this.catalog.assertPublished(lesson);
-    const quiz = await this.forLesson(this.source.manager, lesson.id);
-    return this.response(this.source.manager, quiz);
+    // An edit may replace questions between SELECTs; keep settings and options in one snapshot.
+    return this.source.transaction('REPEATABLE READ', async (manager) => {
+      const lesson = await this.catalog.lesson(lessonId, manager);
+      if (
+        user.role !== Role.ADMIN &&
+        !(user.role === Role.INSTRUCTOR && user.userId === lesson.instructorId)
+      )
+        this.catalog.assertPublished(lesson);
+      const quiz = await this.forLesson(manager, lesson.id);
+      return this.response(manager, quiz);
+    });
   }
 
   async create(
@@ -108,12 +111,10 @@ export class QuizzesService {
     lessonId: string,
     lock = false,
   ): Promise<Quiz> {
-    const quiz = await manager
-      .getRepository(Quiz)
-      .findOne({
-        where: { lessonId },
-        ...(lock ? { lock: { mode: 'pessimistic_write' as const } } : {}),
-      });
+    const quiz = await manager.getRepository(Quiz).findOne({
+      where: { lessonId },
+      ...(lock ? { lock: { mode: 'pessimistic_write' as const } } : {}),
+    });
     if (!quiz) throw new NotFoundException('Quiz not found');
     return quiz;
   }
