@@ -77,14 +77,18 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Tính `progressPct` + update Enrolment, cache tổng lesson published và giải thích index — `@learning`
 - [x] Entity Quiz/Question/Option + API tạo/thay quiz đúng owner, ẩn đáp án đúng — `@learning`
 - [x] Entity QuizAttempt/QuizAnswer + API nộp bài, chấm server-side, giới hạn lượt/thời gian và chống nộp trùng — `@learning`
+- [x] Kiểm thử HTTP module Learning: JWT/role, DTO, envelope/lỗi, chấm điểm, deadline/lượt thi và chứng chỉ public với PostgreSQL + fixtures Catalog — `@learning`
+- [x] Sửa lỗi snapshot khi đọc/sửa quiz đồng thời, deadline tổng Redis và cache cũ làm tụt trạng thái khoá đã hoàn thành; có test hồi quy — `@learning`
 - [ ] S3Module (MinIO `forcePathStyle`) + UploadsModule — `@media`
 - [ ] MediaModule: lưu metadata + serve presigned GET — `@media`
 - [ ] BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`
 - [ ] e2e cho progress + quiz — `@qa`
 - [ ] Tích hợp Learning với schema/module Catalog thật và chốt FK/cascade tới Course/Lesson — `@learning` + `@content` + `@lead`
+- [ ] Bật `LEARNING_DB_TESTS=1` cho integration PostgreSQL trong CI theo hướng dẫn bàn giao — `@lead` + `@learning`
+- [x] Chuẩn bị contract DB, các quyết định FK/cascade cần chốt và ma trận bàn giao QA tại [`docs/learning-integration.md`](docs/learning-integration.md) — `@learning`
 - [ ] Hỗ trợ + review + gỡ chặn — `@lead`
 
-> Rà soát ngày **2026-11-08** theo các commit `9cfba19` và `078d9c3`: phần implementation Learning đã hoàn thành và chạy với fixtures Catalog trong schema demo riêng. Kiểm tra local gần nhất ngày 2026-11-07: **48 test** (gồm 19 integration PostgreSQL), **1 e2e nền tảng**, lint/build backend và frontend đều qua. E2E nền tảng chưa bao phủ nghiệp vụ Learning.
+> Rà soát ngày **2026-11-08**: phần implementation Learning chạy với fixtures Catalog trong schema riêng. Kiểm tra local ngày 2026-11-08: **62 test** (gồm 22 integration service PostgreSQL và 10 HTTP module integration), **1 e2e nền tảng**, lint/build/TypeScript backend đều qua. Frontend không thay đổi trong lần rà soát này; lint/build frontend đã qua ở lần kiểm tra 2026-11-07. E2E nền tảng và module integration với fixtures chưa thay thế nghiệm thu QA với Catalog thật.
 >
 > Bàn giao: xem [`docs/learning.md`](docs/learning.md) và [`docs/learning-wiring.patch`](docs/learning-wiring.patch). Wiring đã được áp dụng; vẫn cần Lead review `AppModule`/`DataSource`, Content cung cấp schema thật và QA xác nhận e2e trước khi nghiệm thu Done toàn hệ thống.
 

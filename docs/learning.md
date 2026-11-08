@@ -37,13 +37,14 @@ Redis: cache tổng bài published trong 30 giây; lỗi cache thì đọc Postg
 - `progressPct = round(completed / published * 100)`, không tính theo thời lượng. Chỉ lesson published được đưa vào cả tử và mẫu; không có bài thì trả 0. Tổng phần trăm lưu trên Enrolment để danh sách enrolment không phải tổng hợp toàn bộ lịch sử.
 - PATCH lấy số giây lớn nhất đã nhận, chặn ở duration của lesson; hoàn thành tại ngưỡng 90%. Một request đến muộn không làm mất tiến độ hoặc thay ngày hoàn thành đầu tiên. Duration lấy từ Lesson theo contract hiện tại; Media/Content cần đồng bộ duration sau khi video sẵn sàng.
 - Mỗi course/user có một enrolment được khoá trong transaction. Hai lesson hoàn thành đồng thời vẫn cập nhật đúng tổng; insert chứng chỉ lỗi thì rollback cả progress và enrolment.
-- Redis giữ tổng bài theo course. Khi một lesson vừa hoàn thành, khi GET tổng tiến độ, hoặc trước khi tổng cache có thể dẫn tới 100%, đọc lại số bài từ DB. Chỉ cấp chứng chỉ khi số bài thực sự bằng tổng bài (>0), tránh 199/200 bị làm tròn thành 100 hoặc cache cũ gây cấp sớm.
+- Redis giữ tổng bài theo course. Khi một lesson vừa hoàn thành, khi GET tổng tiến độ, khi enrolment đã COMPLETED hoặc trước khi tổng cache có thể dẫn tới 100%, đọc lại số bài từ DB. Cache cũ không được làm mất trạng thái/ngày hoàn thành; khi thực sự có thêm bài published, tiến độ vẫn được tính lại. Chỉ cấp chứng chỉ khi số bài thực sự bằng tổng bài (>0), tránh 199/200 bị làm tròn thành 100 hoặc cache cũ gây cấp sớm.
 - Sau khi thay đổi lesson/publish/section, @content nên gọi `PublishedLessonCache.invalidate(courseId)`; TTL 30 giây là đường dự phòng. COUNT đều giới hạn trong course, không đếm toàn bảng mỗi PATCH xem video.
 - Chứng chỉ dùng `INSERT ... ON CONFLICT (userId, courseId) DO NOTHING` trong transaction hoàn thành. Serial UUID được tạo một lần; gọi lại không đổi serial/ngày cấp.
 - Quiz chọn một đáp án, tối đa 3 lượt bắt đầu, kể cả lượt hết giờ. 0/null là không giới hạn thời gian. Deadline dùng thời gian PostgreSQL; tới deadline thì không nhận bài.
 - Khoá enrolment/quiz tuần tự hoá việc bắt đầu lượt; khoá attempt tuần tự hoá việc submit. Không sửa quiz sau khi có attempt, nên câu hỏi và đáp án không đổi giữa lúc làm bài.
 - Điểm dựa trên **tất cả câu hỏi lưu trong DB**. Câu bỏ trống tính sai; question/option khác quiz/câu bị từ chối trước khi lưu. Client không gửi điểm hay userId.
 - `Option.isCorrect` có `select: false`; chỉ truy vấn nội bộ lấy trường này để chấm bài. Response luôn chọn rõ field, không trả entity thẳng ra ngoài.
+- GET quiz dùng transaction `REPEATABLE READ` để settings, questions và options thuộc cùng một snapshot nếu giảng viên thay đề đồng thời. Redis dùng deadline tổng 500 ms, kể cả khi server tiếp tục gửi reply chưa hoàn chỉnh; socket được đóng và request quay về SQL fallback.
 
 ## 5. Ràng buộc DB
 
@@ -84,8 +85,11 @@ npm test -- src/learning/learning.integration.spec.ts
 - Integration: PostgreSQL thật, `synchronize: false`, chạy migration thật; dùng schema ngẫu nhiên `learning_test_<uuid>` và fixtures Catalog theo spec, xoá riêng schema đó sau test. Không dùng/sửa dữ liệu demo hay schema `public`. Mặc định skip khi chưa bật `LEARNING_DB_TESTS`.
 - Bao phủ ngưỡng 90%, published/draft, monotonic progress, request đồng thời, idempotency, rollback, ownership, đáp án bị ẩn, deadline, tối đa lượt và migration lên/xuống.
 - E2E thuộc @qa; service integration không thay cho e2e HTTP trên ứng dụng đã tích hợp.
+- HTTP module integration của Dev nằm trong `learning.http.integration.spec.ts`: dùng AuthModule và LearningModule thật với PostgreSQL, nhưng Catalog là fixtures và HealthService được stub để kiểm tra contract route. Suite xác nhận JWT/role, DTO, response/error envelope, deadline/lượt thi, chấm điểm và tra cứu chứng chỉ; không thay thế QA e2e với Content thật.
 
 Kết quả kiểm tra local ngày 2026-11-07: lint và build thành công; `LEARNING_DB_TESTS=1 npm test` qua 48 test (gồm 19 integration PostgreSQL); e2e nền tảng có sẵn qua 1 test. Probe trực tiếp xác nhận Redis AUTH/SET/GET và health PostgreSQL/Redis/MinIO đều hoạt động. E2E nền tảng chưa bao phủ các route nghiệp vụ Learning; phần này vẫn cần @qa xác nhận.
+
+Rà soát ngày 2026-11-08: sửa snapshot GET quiz, deadline tổng Redis và việc cache cũ làm tụt trạng thái enrolment đã hoàn thành; cả ba đã tái hiện bằng test thất bại trước khi sửa. Bộ test tăng lên **62 test**: 22 service integration PostgreSQL, 10 HTTP module integration và 30 unit/DTO/adapter test. Lint, build, TypeScript và 1 e2e nền tảng đều qua. Các schema test đã được dọn sau khi chạy; không cập nhật dữ liệu demo hoặc public.
 
 ## 9. Tích hợp cho Lead
 
@@ -101,6 +105,8 @@ npm run start:dev
 ```
 
 Giữ `synchronize: false`; không thêm migrations vào runtime. Dữ liệu/endpoint nghiệp vụ cần Catalog triển khai đúng bảng `courses`, `sections`, `lessons`, `enrolments` với camelCase như `catalog-api.md`. Sau khi Content thay schema, chạy lại integration/e2e với schema thật. `REDIS_HOST`/`MINIO_HOST` tuỳ chọn, mặc định localhost; các port/password lấy từ config sẵn có. Khi chạy app trong container, cấu hình host tương ứng `redis` và `minio`.
+
+Các cột, quyết định FK/cascade và ma trận bàn giao QA được liệt kê trong [`learning-integration.md`](learning-integration.md).
 
 Để thử trước khi Content hoàn tất, dùng `npm run demo:seed` rồi `npm run demo:start` trong `backend/`. API port 3002 dùng schema `learning_demo`, gồm fixtures Catalog và implementation Learning thật. Hướng dẫn giao diện Next.js nằm tại [`frontend/README.md`](../frontend/README.md). Bản demo không thay thế e2e với module Content thật.
 
