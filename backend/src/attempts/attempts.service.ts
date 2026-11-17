@@ -11,7 +11,7 @@ import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface
 import { CatalogAccess } from '../learning/catalog-access.service.js';
 import type {
   AttemptResultResponse,
-  PublicQuestion,
+  StartedAttemptResponse,
 } from '../learning/learning.responses.js';
 import { Quiz } from '../quizzes/quiz.entity.js';
 import {
@@ -76,7 +76,7 @@ export class AttemptsService {
   async start(
     user: AuthenticatedUser,
     lessonId: string,
-  ): Promise<{ attemptId: string; questions: PublicQuestion[] }> {
+  ): Promise<StartedAttemptResponse> {
     this.catalog.assertStudent(user);
     return this.source.transaction(async (manager) => {
       const lesson = await this.catalog.lesson(lessonId, manager);
@@ -115,6 +115,10 @@ export class AttemptsService {
       return {
         attemptId: attempt.id,
         questions: this.quizzes.publicQuestions(questions),
+        startedAt: attempt.startedAt,
+        expiresAt: quiz.timeLimitSec
+          ? new Date(attempt.startedAt.getTime() + quiz.timeLimitSec * 1000)
+          : null,
       };
     });
   }

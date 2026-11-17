@@ -91,6 +91,8 @@ Kết quả kiểm tra local ngày 2026-11-07: lint và build thành công; `LEA
 
 Rà soát ngày 2026-11-08: sửa snapshot GET quiz, deadline tổng Redis và việc cache cũ làm tụt trạng thái enrolment đã hoàn thành; cả ba đã tái hiện bằng test thất bại trước khi sửa. Bộ test tăng lên **62 test**: 22 service integration PostgreSQL, 10 HTTP module integration và 30 unit/DTO/adapter test. Lint, build, TypeScript và 1 e2e nền tảng đều qua. Các schema test đã được dọn sau khi chạy; không cập nhật dữ liệu demo hoặc public.
 
+Rà soát ngày 2026-11-17: đồng bộ scaffold frontend từ `main`, giữ trang chủ `/` và chuyển Learning sang `/learning`. CSS module giới hạn style trong dashboard; Tailwind chỉ xử lý `globals.css`. Bắt đầu quiz trả thêm `startedAt`/`expiresAt` theo PostgreSQL, frontend không tự cộng lại toàn bộ thời gian khi response đến chậm; lượt không giới hạn trả `expiresAt: null`. Cả **62 test** tiếp tục qua với PostgreSQL, bổ sung assertion HTTP đối chiếu deadline với record DB và service assertion cho lượt không giới hạn. Catalog thật, FK/cascade, CI integration và nghiệm thu QA vẫn chờ các owner tương ứng.
+
 ## 9. Tích hợp cho Lead
 
 Đã import `LearningModule` trong `AppModule` và thêm `LEARNING_ENTITIES` vào `AppDataSource.options.entities` theo yêu cầu chạy thử. [`learning-wiring.patch`](learning-wiring.patch) lưu lại đúng hai thay đổi shared này để Lead review; **không áp dụng lại patch** trên nhánh đã có wiring.

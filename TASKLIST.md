@@ -79,6 +79,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Entity QuizAttempt/QuizAnswer + API nộp bài, chấm server-side, giới hạn lượt/thời gian và chống nộp trùng — `@learning`
 - [x] Kiểm thử HTTP module Learning: JWT/role, DTO, envelope/lỗi, chấm điểm, deadline/lượt thi và chứng chỉ public với PostgreSQL + fixtures Catalog — `@learning`
 - [x] Sửa lỗi snapshot khi đọc/sửa quiz đồng thời, deadline tổng Redis và cache cũ làm tụt trạng thái khoá đã hoàn thành; có test hồi quy — `@learning`
+- [x] Đồng bộ frontend scaffold từ `main`, tách dashboard `/learning` và dùng deadline quiz do PostgreSQL cấp, kiểm tra HTTP/integration cho deadline và lượt không giới hạn — `@learning`
 - [ ] S3Module (MinIO `forcePathStyle`) + UploadsModule — `@media`
 - [ ] MediaModule: lưu metadata + serve presigned GET — `@media`
 - [ ] BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`

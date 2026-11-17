@@ -35,6 +35,8 @@ export interface Quiz {
 export interface Attempt {
   attemptId: string;
   questions: Question[];
+  startedAt: string;
+  expiresAt: string | null;
 }
 export interface AttemptResult {
   attemptId: string;

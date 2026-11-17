@@ -52,3 +52,10 @@ export interface AttemptResultResponse {
   passed: boolean;
   submittedAt: Date;
 }
+
+export interface StartedAttemptResponse {
+  attemptId: string;
+  questions: PublicQuestion[];
+  startedAt: Date;
+  expiresAt: Date | null;
+}

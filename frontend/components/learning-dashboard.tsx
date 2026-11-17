@@ -189,9 +189,7 @@ export function LearningDashboard() {
       );
       const active = {
         ...started,
-        deadline: quiz?.timeLimitSec
-          ? Date.now() + quiz.timeLimitSec * 1000
-          : null,
+        deadline: started.expiresAt ? Date.parse(started.expiresAt) : null,
       };
       setAttempt(active);
       setAnswers({});
@@ -590,8 +588,10 @@ export function LearningDashboard() {
             <div className="quiz-meta">
               <span>{quiz?.questions.length ?? 2} câu hỏi</span>
               <span>
-                {quiz?.timeLimitSec
-                  ? `${Math.round(quiz.timeLimitSec / 60)} phút`
+                {quiz
+                  ? quiz.timeLimitSec
+                    ? `${Math.round(quiz.timeLimitSec / 60)} phút`
+                    : "Không giới hạn thời gian"
                   : "3 phút"}
               </span>
               <span>Đạt từ {quiz?.passScore ?? 70} điểm</span>

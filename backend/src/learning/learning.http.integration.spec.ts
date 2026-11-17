@@ -12,6 +12,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { DataSource } from 'typeorm';
 import { AuthModule } from '../auth/auth.module.js';
+import { QuizAttempt } from '../attempts/quiz-attempt.entity.js';
 import { AuthService } from '../auth/auth.service.js';
 import { configureApp } from '../bootstrap.js';
 import { HealthService } from '../health/health.service.js';
@@ -318,6 +319,13 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       const response = await start();
       expect(response.body.data.attemptId).toEqual(expect.any(String));
       expect(response.body.data.questions).toHaveLength(2);
+      const persisted = await source.getRepository(QuizAttempt).findOneByOrFail({
+        id: response.body.data.attemptId,
+      });
+      expect(response.body.data.startedAt).toBe(persisted.startedAt.toISOString());
+      expect(Date.parse(response.body.data.expiresAt)).toBe(
+        persisted.startedAt.getTime() + 60000,
+      );
       expect(JSON.stringify(response.body)).not.toContain('isCorrect');
       await server()
         .post(path)

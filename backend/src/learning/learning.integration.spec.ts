@@ -459,6 +459,7 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       await quizzes.create(teacher, lessons[0], quizInput(0));
       for (let index = 0; index < 3; index++) {
         const attempt = await attempts.start(student, lessons[0]);
+        expect(attempt.expiresAt).toBeNull();
         await source.getRepository(QuizAttempt).update(attempt.attemptId, {
           startedAt: new Date(Date.now() - 86400000),
         });

@@ -1,12 +1,20 @@
 import type { NextConfig } from "next";
 
-const backend = (process.env.LMS_API_URL ?? "http://127.0.0.1:3000").replace(
-  /\/$/,
-  "",
-);
+const backend = (process.env.LMS_API_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
-  turbopack: { root: process.cwd() },
+  experimental: { agentFeedback: true },
+  cacheComponents: true,
+  partialPrefetching: true,
+  turbopack: {
+    root: process.cwd(),
+    rules: {
+      "globals.css": {
+        loaders: ["@tailwindcss/turbopack"],
+        as: "*.css",
+      },
+    },
+  },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${backend}/v1/:path*` }];
   },
