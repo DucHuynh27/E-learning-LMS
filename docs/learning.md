@@ -93,6 +93,8 @@ Rà soát ngày 2026-11-08: sửa snapshot GET quiz, deadline tổng Redis và v
 
 Rà soát ngày 2026-11-17: đồng bộ scaffold frontend từ `main`, giữ trang chủ `/` và chuyển Learning sang `/learning`. CSS module giới hạn style trong dashboard; Tailwind chỉ xử lý `globals.css`. Bắt đầu quiz trả thêm `startedAt`/`expiresAt` theo PostgreSQL, frontend không tự cộng lại toàn bộ thời gian khi response đến chậm; lượt không giới hạn trả `expiresAt: null`. Cả **62 test** tiếp tục qua với PostgreSQL, bổ sung assertion HTTP đối chiếu deadline với record DB và service assertion cho lượt không giới hạn. Catalog thật, FK/cascade, CI integration và nghiệm thu QA vẫn chờ các owner tương ứng.
 
+Bổ sung CI ngày 2026-11-17: job `e2e` đợi PostgreSQL healthy rồi chạy riêng hai suite Learning với `LEARNING_DB_TESTS=1`. Đã chạy đúng lệnh bằng pnpm 12.11.2 trên máy: **32/32 test integration** qua, lint backend qua. Cấu hình đã hoàn tất; kết quả GitHub Actions cần xác nhận trên PR và workflow vẫn cần Lead review. Catalog thật, FK/cascade và nghiệm thu QA chưa hoàn tất; xem [`learning-integration.md`](learning-integration.md).
+
 ## 9. Tích hợp cho Lead
 
 Đã import `LearningModule` trong `AppModule` và thêm `LEARNING_ENTITIES` vào `AppDataSource.options.entities` theo yêu cầu chạy thử. [`learning-wiring.patch`](learning-wiring.patch) lưu lại đúng hai thay đổi shared này để Lead review; **không áp dụng lại patch** trên nhánh đã có wiring.

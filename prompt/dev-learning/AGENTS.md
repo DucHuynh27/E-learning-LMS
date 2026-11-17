@@ -46,6 +46,7 @@ Progress cập nhật đúng %, chứng chỉ tự phát khi đạt 100%, quiz c
 - [x] Chính sách quiz: tối đa 3 lượt bắt đầu, tính cả hết giờ; chấm server-side, kiểm tra deadline và chống nộp trùng.
 - [x] Implementation Progress/Certificate/Quiz/Attempt/Health, wiring, migration và bản demo local.
 - [x] Test HTTP module với Auth/JWT/role/DTO thật và test hồi quy snapshot quiz, timeout Redis, cache cũ; vẫn dùng fixtures Catalog riêng.
+- [x] Cấu hình CI chạy 32 test integration PostgreSQL với `LEARNING_DB_TESTS=1`, đợi DB healthy; đã kiểm tra local bằng pnpm, chờ Lead review workflow và kết quả GitHub Actions trên PR.
 - [ ] Tích hợp với Course/Lesson/Enrolment thật và FK/cascade — phối hợp `@content` + Lead; nhánh Content hiện chưa có implementation.
 - [ ] Lead review thay đổi cross-cutting và QA nghiệm thu e2e toàn hệ thống.
 

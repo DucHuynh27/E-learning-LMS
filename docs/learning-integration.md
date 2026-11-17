@@ -2,6 +2,8 @@
 
 Rà soát ngày 2026-11-08 trên `feat/learning`: remote `origin/feat/content` và `origin/feat/media` vẫn ở `c76b1b4`, chưa có entities/migrations Content/Media. Learning đã chạy với fixtures; chưa đánh dấu hoàn tất tích hợp Catalog thật.
 
+Kiểm tra lại ngày 2026-11-17 sau `git fetch origin --prune`: `origin/feat/content` vẫn ở `c76b1b4`, chưa có schema/module Catalog thật. Chưa thể thêm FK/cascade, nối invalidation vào thao tác publish/xoá của Content hoặc nghiệm thu e2e xuyên module. Các việc này tiếp tục để mở; không tạo Catalog thay owner.
+
 ## 1. Contract DB cần Content cung cấp
 
 Các tên bảng/cột dưới đây được đọc/ghi bởi `backend/src/learning/catalog-access.service.ts` và `backend/src/progress/progress.service.ts`.
@@ -48,7 +50,7 @@ E2E nền tảng `backend/test/app.e2e-spec.ts` hiện chỉ kiểm tra `/v1`; k
 
 ## 4. Đưa integration vào CI
 
-Workflow hiện tại chưa bật `LEARNING_DB_TESTS`, nên `pnpm test` mặc định bỏ qua các suite dùng PostgreSQL. Lead cần thêm bước dưới đây vào job đã có PostgreSQL và `.env` trước khi dùng CI làm bằng chứng nghiệm thu Learning:
+Workflow `.github/workflows/ci.yml` chạy bước dưới đây trong job `e2e`, sau khi tạo `.env` và đợi PostgreSQL healthy bằng `docker compose up -d --wait --wait-timeout 90 postgres`. Biến `LEARNING_DB_TESTS=1` bật cả 22 service integration và 10 HTTP module integration; lỗi test làm job thất bại trước bước e2e nền tảng. Bước `pnpm test` trong job `lint-and-test` vẫn chỉ chạy unit test khi không có PostgreSQL.
 
 ```yaml
 - name: Learning PostgreSQL integration
@@ -57,4 +59,4 @@ Workflow hiện tại chưa bật `LEARNING_DB_TESTS`, nên `pnpm test` mặc đ
     LEARNING_DB_TESTS: '1'
 ```
 
-Hai suite tự tạo/chạy migration/dọn schema test riêng; tài khoản DB của job cần quyền tạo schema và extension UUID như môi trường hiện tại. Không cần khởi động Redis/MinIO cho bước này: suite kiểm tra fallback/cache adapter riêng, HTTP module suite stub HealthService. Không dùng việc test bị skip để tick nhiệm vụ này.
+Hai suite tự tạo/chạy migration/dọn schema test riêng; tài khoản DB của job cần quyền tạo schema và extension UUID như môi trường hiện tại. Không cần khởi động Redis/MinIO cho bước này: suite kiểm tra fallback/cache adapter riêng, HTTP module suite stub HealthService. Kết quả với fixtures xác nhận contract Learning, chưa xác nhận tương thích Catalog thật hoặc nghiệm thu QA. Thay đổi workflow thuộc phần dùng chung và vẫn cần Lead review qua PR.

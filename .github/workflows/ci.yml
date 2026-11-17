@@ -45,5 +45,9 @@ jobs:
           sed -i 's/^DB_NAME=.*/DB_NAME=lms/' .env
       - name: Bật hạ tầng
         # e2e hiện chỉ cần Postgres. Sẽ bổ sung redis/minio khi test cần dùng.
-        run: docker compose up -d postgres && sleep 10
+        run: docker compose up -d --wait --wait-timeout 90 postgres
+      - name: Learning PostgreSQL integration
+        run: pnpm test src/learning/learning.integration.spec.ts src/learning/learning.http.integration.spec.ts
+        env:
+          LEARNING_DB_TESTS: '1'
       - run: pnpm test:e2e
