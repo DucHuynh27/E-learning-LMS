@@ -21,8 +21,8 @@ Request
 | File | Trách nhiệm |
 | --- | --- |
 | `src/config/env.validation.ts` | `EnvVars` + `validateEnv` — chặn app khởi động nếu env sai/thiếu |
-| `src/common/throttling.ts` | Hằng số ngưỡng rate limit + `throttlerRootOptions()` dùng chung runtime & test |
-| `src/bootstrap.ts` | `configureApp(app)` — gắn CORS, pipes/interceptors/filter/versioning, dùng chung cho runtime & e2e |
+| `src/common/throttling.ts` | Hằng số ngưỡng rate limit (global/login/register/refresh) + `loginTracker` + `throttlerRootOptions()`, dùng chung runtime & test |
+| `src/bootstrap.ts` | `configureApp(app)` — gắn CORS, `trust proxy`, pipes/interceptors/filter/versioning; dùng chung cho runtime & e2e |
 | `src/common/interceptors/transform.interceptor.ts` | Bọc mọi response thành `{ data }` |
 | `src/common/filters/all-exceptions.filter.ts` | Shape lỗi thống nhất, log 5xx |
 | `src/database/data-source.ts` | Cấu hình TypeORM dùng chung cho runtime + CLI |
@@ -48,9 +48,12 @@ Request
 ### Hardening (Sprint 3)
 
 - **CORS trong `configureApp`, không ở `main.ts`:** để e2e dùng đúng cấu hình thật. Origin lấy từ `CORS_ORIGIN` (danh sách phân tách dấu phẩy); để trống thì dùng mặc định dev. `credentials: true` kèm danh sách origin tường minh (không dùng `*`) để không vi phạm ràng buộc của trình duyệt.
-- **Rate limit bằng `@nestjs/throttler`, ngưỡng gom một chỗ:** mặc định toàn API 100 req/60s; `POST /auth/login` siết còn 5 req/60s để chặn dò mật khẩu. Hằng số nằm ở `src/common/throttling.ts` để runtime và test dùng chung, tránh lệch số.
+- **Rate limit bằng `@nestjs/throttler`, ngưỡng gom một chỗ:** mặc định toàn API 100 req/60s; `login` 5, `register` 10, `refresh` 20 req/60s. Hằng số nằm ở `src/common/throttling.ts` để runtime và test dùng chung, tránh lệch số.
+- **Login đếm theo tài khoản, không chỉ IP:** `loginTracker` key theo `req.body.email` (fallback IP). Vì frontend proxy server-side (Next rewrite) nên backend không thấy IP client; key theo email vừa chặn dò mật khẩu phân tán nhiều IP vào cùng account, vừa không khoá lây người dùng chung NAT.
+- **`trust proxy` cấu hình được qua `TRUST_PROXY`, mặc định tắt:** chỉ tin `X-Forwarded-For` khi request đến từ proxy thật (số hop, `loopback`, hoặc danh sách IP/CIDR). `EnvVars` **cấm** giá trị `true` trần vì nó cho phép client tự giả IP để né rate limit.
 - **`errorMessage` tùy biến thay vì override guard:** `ThrottlerException` mặc định trả chuỗi `"ThrottlerException: Too Many Requests"`. Đặt `errorMessage: 'Too many requests'` giữ response lỗi sạch, và `AllExceptionsFilter` bọc lại thành cùng shape với mọi lỗi khác.
 - **Ẩn field nhạy cảm bằng hai lớp:** `passwordHash` vừa `select: false` (không kéo hash khỏi DB) vừa `@Exclude()` (nếu entity lỡ lọt ra ngoài ranh giới DTO thì `ClassSerializerInterceptor` vẫn cắt). DTO ở biên (`toPublicUser`) vẫn là lớp chính.
+- **Thứ tự guard toàn cục:** `ThrottlerGuard` (đăng ký ở `AppModule`) chạy **trước** `JwtAuthGuard`/`RolesGuard` (ở `AuthModule`) — guard của module cha chạy trước module nhập. Nhờ vậy request bị 401 vẫn được đếm, không né được rate limit. Có test hồi quy khoá hành vi này.
 
 ## 5. Cơ sở dữ liệu liên quan
 | Entity | Trường quan trọng | Index / Unique | Lý do |
@@ -70,7 +73,7 @@ Request
 `CreateUserDto`: `email` (IsEmail) · `password` (8..72) · `fullName` (1..255).
 `user` trả về: `{ id, email, fullName, role }` — **không** có `passwordHash`.
 
-`POST /auth/login` bị rate limit **5 req/60s** mỗi IP (vượt → 429); các route khác dùng ngưỡng toàn cục 100 req/60s.
+Rate limit (vượt → 429): `login` **5 req/60s theo tài khoản (email)**, `register` **10 req/60s**, `refresh` **20 req/60s**, các route còn lại theo ngưỡng toàn cục **100 req/60s theo IP**.
 
 ## 7. Xử lý lỗi & edge case
 - **400** — DTO sai/thiếu (ValidationPipe `whitelist` + `forbidNonWhitelisted`).
@@ -81,8 +84,8 @@ Request
 - Login sai → 401 với message chung "Invalid credentials".
 
 ## 8. Test
-- **Unit:** `app.controller.spec.ts` (AppController/AppService) · `auth.service.spec.ts` (register/login/refresh + không lộ `passwordHash`) · `user.entity.spec.ts` (serialize cắt `passwordHash`) · `bootstrap.spec.ts` (CORS + `resolveCorsOrigins`).
-- **Integration:** `auth/login-throttle.integration.spec.ts` — login lần thứ 6 trong 60s trả 429 đúng message (boot `AuthController` thật + `ThrottlerGuard`, stub `AuthService`).
+- **Unit:** `app.controller.spec.ts` (AppController/AppService) · `auth.service.spec.ts` (register/login/refresh + không lộ `passwordHash`) · `user.entity.spec.ts` (serialize cắt `passwordHash`) · `bootstrap.spec.ts` (CORS theo config, `resolveCorsOrigins`, `parseTrustProxy`).
+- **Integration:** `auth-throttle.integration.spec.ts` (login/register/refresh trả 429 sau ngưỡng; email khác không bị khoá lây) · `common/trust-proxy.integration.spec.ts` (`trust proxy` bật thì đếm riêng theo client, tắt thì bỏ qua `X-Forwarded-For`) · `common/throttler-order.integration.spec.ts` (throttler chạy trước guard 401).
 - **e2e:** smoke `GET /v1` → `{ data: 'Hello World!' }` (dùng `configureApp`).
 - **Smoke thủ công:** register 201 (không lộ hash) · login OK · `/me` có token 200 / không token 401 · validation 400.
 - **Còn nợ:** e2e riêng cho auth (register/login/refresh/me) — do `@qa` viết.
@@ -95,6 +98,7 @@ Request
 ## 10. Hạn chế / chưa làm
 - **Chưa có refresh token rotation / lưu refresh token** (nằm trong danh sách **CẮT** của `TASKLIST.md`) → chưa thu hồi được token.
 - **Rate limit dùng storage in-memory** — đủ cho demo một instance; nhiều instance cần storage chia sẻ (Redis) mới đếm đúng trên toàn cụm.
+- **`trust proxy` mặc định tắt** — khi chạy sau proxy mà chưa cấu hình `TRUST_PROXY`, backend vẫn thấy IP của proxy nên các route dùng IP (ngưỡng toàn cục) đếm chung một bucket. Login đã đếm theo tài khoản nên không bị ảnh hưởng; các route khác cần đặt `TRUST_PROXY` đúng.
 - **Rate limit cho route quiz chưa gắn** — việc này đụng controller của `@learning`, đã tách khỏi `feat/auth` (xem ghi chú bàn giao trong `TASKLIST.md`).
 - **Swagger hoãn.**
 - **Chưa có test DB riêng cho e2e** (`@qa`).

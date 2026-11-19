@@ -104,7 +104,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] HealthModule (Postgres/Redis/MinIO): implementation + wiring + unit/probe local — `@learning`
 - [ ] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
   - [x] CORS trong `configureApp` + `CORS_ORIGIN` (dùng chung runtime/e2e) — `@lead`
-  - [x] Rate limit toàn cục + siết `POST /auth/login` (5 req/60s, 429 sạch) — `@lead`
+  - [x] Rate limit: toàn cục + `login` (5, theo tài khoản) / `register` (10) / `refresh` (20), `trust proxy` cấu hình, 429 sạch — `@lead`
   - [x] Ẩn field nhạy cảm: `@Exclude` `passwordHash` + test — `@lead`
   - [ ] Rate limit route quiz — sửa trực tiếp controller `@learning`, **hoãn tới khi Lead yêu cầu** — `@lead` + `@learning`
 - [ ] e2e toàn hệ + script demo — `@qa`
@@ -114,7 +114,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
   - [x] Phần Auth: cập nhật `docs/auth.md` (hardening CORS/rate limit/serialize) — `@lead`
 - [x] Push origin + bật branch protection — `@lead`
 
-> Cập nhật **2026-11-19** (branch `feat/auth`): hoàn tất phần hardening thuộc `@lead` — CORS (`configureApp` + `CORS_ORIGIN`), rate limit (throttler toàn cục, login 5 req/60s), ẩn `passwordHash` (`@Exclude`). Kiểm tra local: `pnpm lint` sạch, **43 unit test + 1 integration throttler** qua, `pnpm build` qua, **1 e2e nền tảng** qua. Còn lại: rate limit route quiz (hoãn, sửa controller `@learning`) và e2e auth do `@qa`.
+> Cập nhật **2026-11-19** (branch `feat/auth`): hoàn tất phần hardening thuộc `@lead` — CORS (`configureApp` + `CORS_ORIGIN`), rate limit (throttler toàn cục; `login` 5 theo tài khoản, `register` 10, `refresh` 20), `trust proxy` cấu hình qua `TRUST_PROXY` (mặc định tắt), ẩn `passwordHash` (`@Exclude`). Kiểm tra local: `pnpm lint` sạch, **54 test** (unit + integration throttler/trust-proxy/guard-order) qua, `pnpm build` qua, **1 e2e nền tảng** qua. Xử lý các issue review #30–#35 (đã xác minh guard order đúng, chỉ thêm test hồi quy). Còn lại: rate limit route quiz (hoãn, sửa controller `@learning`) và e2e auth do `@qa`.
 
 ## Đã cắt (không làm trong 3 tuần)
 - Transcode HLS đa bitrate + ffmpeg

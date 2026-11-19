@@ -37,6 +37,8 @@ describe('AuthService', () => {
   };
 
   beforeEach(() => {
+    // verifyMock là mock cấp module (vi.mock) nên phải tự reset, tránh test phụ thuộc thứ tự.
+    verifyMock.mockReset();
     users = {
       findByEmail: vi.fn(),
       findByEmailForAuth: vi.fn(),

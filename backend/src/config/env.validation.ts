@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
   validateSync,
@@ -20,6 +21,15 @@ export class EnvVars {
   @IsOptional()
   @IsString()
   CORS_ORIGIN?: string;
+
+  // Số hop / 'loopback' / danh sách IP tin cậy cho Express `trust proxy`.
+  // Cấm `true` trần vì nó cho phép client giả X-Forwarded-For để né rate limit.
+  @IsOptional()
+  @Matches(/^(?!\s*true\s*$).*$/i, {
+    message:
+      'TRUST_PROXY không được là "true"; dùng số hop, loopback hoặc danh sách IP tin cậy',
+  })
+  TRUST_PROXY?: string;
 
   @IsString() @IsNotEmpty() DB_HOST: string;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) DB_PORT: number;
