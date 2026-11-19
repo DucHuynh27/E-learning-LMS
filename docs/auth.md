@@ -99,7 +99,7 @@ Rate limit (vượt → 429): `login` **5 req/60s theo tài khoản (email)**, `
 - **Chưa có refresh token rotation / lưu refresh token** (nằm trong danh sách **CẮT** của `TASKLIST.md`) → chưa thu hồi được token.
 - **Rate limit dùng storage in-memory** — đủ cho demo một instance; nhiều instance cần storage chia sẻ (Redis) mới đếm đúng trên toàn cụm.
 - **`trust proxy` mặc định tắt** — khi chạy sau proxy mà chưa cấu hình `TRUST_PROXY`, backend vẫn thấy IP của proxy nên các route dùng IP (ngưỡng toàn cục) đếm chung một bucket. Login đã đếm theo tài khoản nên không bị ảnh hưởng; các route khác cần đặt `TRUST_PROXY` đúng.
-- **Rate limit cho route quiz chưa gắn** — việc này đụng controller của `@learning`, đã tách khỏi `feat/auth` (xem ghi chú bàn giao trong `TASKLIST.md`).
+- **Rate limit cho route quiz** — đã gắn `@Throttle` (10 req/60s) cho start/submit attempt tại `@learning` (`attempts.controller.ts`); là thay đổi cross-module do `@lead` thực hiện và cần `@learning` review.
 - **Swagger hoãn.**
 - **Chưa có test DB riêng cho e2e** (`@qa`).
 - `JWT_ACCESS_TTL`/`JWT_REFRESH_TTL` để mặc định trong code nếu env thiếu.

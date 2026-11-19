@@ -6,9 +6,11 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
+import { QUIZ_ATTEMPT_THROTTLE } from '../common/throttling.js';
 import {
   AttemptParamsDto,
   LessonParamsDto,
@@ -24,6 +26,7 @@ export class AttemptsController {
     @Inject(AttemptsService) private readonly attempts: AttemptsService,
   ) {}
 
+  @Throttle({ default: QUIZ_ATTEMPT_THROTTLE })
   @Post('lessons/:lessonId/quiz/attempts')
   start(
     @CurrentUser() user: AuthenticatedUser,
@@ -32,6 +35,7 @@ export class AttemptsController {
     return this.attempts.start(user, params.lessonId);
   }
 
+  @Throttle({ default: QUIZ_ATTEMPT_THROTTLE })
   @HttpCode(200)
   @Post('quiz-attempts/:id/submit')
   submit(
