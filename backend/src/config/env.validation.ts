@@ -3,6 +3,7 @@ import {
   IsInt,
   IsBoolean,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Max,
   Min,
@@ -15,6 +16,11 @@ export class EnvVars {
   @Min(1)
   @Max(65535)
   PORT: number;
+
+  // Danh sách origin cho CORS, phân tách bằng dấu phẩy; để trống dùng mặc định dev.
+  @IsOptional()
+  @IsString()
+  CORS_ORIGIN?: string;
 
   @IsString() @IsNotEmpty() DB_HOST: string;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) DB_PORT: number;

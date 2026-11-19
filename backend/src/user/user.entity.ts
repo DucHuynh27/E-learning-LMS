@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import {
   Column,
   CreateDateColumn,
@@ -22,8 +23,11 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   email: string;
 
+  // Hai lớp bảo vệ: `select: false` không kéo hash khỏi DB, `@Exclude` để lỡ entity
+  // có lọt ra ngoài (trả thẳng thay vì qua DTO) thì ClassSerializerInterceptor vẫn cắt.
+  @Exclude()
   @Column({ type: 'varchar', length: 255, select: false })
-  passwordHash: string; // không select mặc định
+  passwordHash: string;
 
   @Column({ type: 'varchar', length: 255 })
   fullName: string;
