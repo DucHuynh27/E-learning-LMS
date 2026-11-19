@@ -11,6 +11,7 @@ Request
   → JwtAuthGuard (toàn cục) ── nếu @Public() → bỏ qua
         └─ JwtStrategy: verify access token → request.user = { userId, email, role }
   → RolesGuard ── đọc @Roles() metadata, so role
+  → ThrottlerGuard ── đếm request theo IP; vượt ngưỡng → 429
   → Controller → Service → UsersRepository → DB
   → ClassSerializerInterceptor → TransformInterceptor (bọc { data })
   (lỗi ở bất kỳ đâu → AllExceptionsFilter)
@@ -20,7 +21,8 @@ Request
 | File | Trách nhiệm |
 | --- | --- |
 | `src/config/env.validation.ts` | `EnvVars` + `validateEnv` — chặn app khởi động nếu env sai/thiếu |
-| `src/bootstrap.ts` | `configureApp(app)` — gắn pipes/interceptors/filter/versioning, dùng chung cho runtime & e2e |
+| `src/common/throttling.ts` | Hằng số ngưỡng rate limit + `throttlerRootOptions()` dùng chung runtime & test |
+| `src/bootstrap.ts` | `configureApp(app)` — gắn CORS, pipes/interceptors/filter/versioning, dùng chung cho runtime & e2e |
 | `src/common/interceptors/transform.interceptor.ts` | Bọc mọi response thành `{ data }` |
 | `src/common/filters/all-exceptions.filter.ts` | Shape lỗi thống nhất, log 5xx |
 | `src/database/data-source.ts` | Cấu hình TypeORM dùng chung cho runtime + CLI |
@@ -43,6 +45,13 @@ Request
 - **`AllExceptionsFilter` log 5xx nhưng giấu chi tiết:** bug server được ghi log đầy đủ để trace, nhưng client chỉ nhận `Internal server error` — không lộ stack.
 - **`EnvVars` crash lúc boot:** sai env phải chết sớm và rõ, thay vì chạy với giá trị rỗng rồi lỗi mơ hồ lúc runtime.
 
+### Hardening (Sprint 3)
+
+- **CORS trong `configureApp`, không ở `main.ts`:** để e2e dùng đúng cấu hình thật. Origin lấy từ `CORS_ORIGIN` (danh sách phân tách dấu phẩy); để trống thì dùng mặc định dev. `credentials: true` kèm danh sách origin tường minh (không dùng `*`) để không vi phạm ràng buộc của trình duyệt.
+- **Rate limit bằng `@nestjs/throttler`, ngưỡng gom một chỗ:** mặc định toàn API 100 req/60s; `POST /auth/login` siết còn 5 req/60s để chặn dò mật khẩu. Hằng số nằm ở `src/common/throttling.ts` để runtime và test dùng chung, tránh lệch số.
+- **`errorMessage` tùy biến thay vì override guard:** `ThrottlerException` mặc định trả chuỗi `"ThrottlerException: Too Many Requests"`. Đặt `errorMessage: 'Too many requests'` giữ response lỗi sạch, và `AllExceptionsFilter` bọc lại thành cùng shape với mọi lỗi khác.
+- **Ẩn field nhạy cảm bằng hai lớp:** `passwordHash` vừa `select: false` (không kéo hash khỏi DB) vừa `@Exclude()` (nếu entity lỡ lọt ra ngoài ranh giới DTO thì `ClassSerializerInterceptor` vẫn cắt). DTO ở biên (`toPublicUser`) vẫn là lớp chính.
+
 ## 5. Cơ sở dữ liệu liên quan
 | Entity | Trường quan trọng | Index / Unique | Lý do |
 | --- | --- | --- | --- |
@@ -61,15 +70,19 @@ Request
 `CreateUserDto`: `email` (IsEmail) · `password` (8..72) · `fullName` (1..255).
 `user` trả về: `{ id, email, fullName, role }` — **không** có `passwordHash`.
 
+`POST /auth/login` bị rate limit **5 req/60s** mỗi IP (vượt → 429); các route khác dùng ngưỡng toàn cục 100 req/60s.
+
 ## 7. Xử lý lỗi & edge case
 - **400** — DTO sai/thiếu (ValidationPipe `whitelist` + `forbidNonWhitelisted`).
 - **401** — thiếu/sai/hết hạn token; refresh token không hợp lệ.
 - **403** — đã đăng nhập nhưng sai role (RolesGuard).
 - **409** — register email đã tồn tại (ConflictException).
+- **429** — vượt ngưỡng rate limit (ThrottlerGuard) — `{ statusCode: 429, message: 'Too many requests', ... }`.
 - Login sai → 401 với message chung "Invalid credentials".
 
 ## 8. Test
-- **Unit:** `app.controller.spec.ts` (AppController/AppService).
+- **Unit:** `app.controller.spec.ts` (AppController/AppService) · `auth.service.spec.ts` (register/login/refresh + không lộ `passwordHash`) · `user.entity.spec.ts` (serialize cắt `passwordHash`) · `bootstrap.spec.ts` (CORS + `resolveCorsOrigins`).
+- **Integration:** `auth/login-throttle.integration.spec.ts` — login lần thứ 6 trong 60s trả 429 đúng message (boot `AuthController` thật + `ThrottlerGuard`, stub `AuthService`).
 - **e2e:** smoke `GET /v1` → `{ data: 'Hello World!' }` (dùng `configureApp`).
 - **Smoke thủ công:** register 201 (không lộ hash) · login OK · `/me` có token 200 / không token 401 · validation 400.
 - **Còn nợ:** e2e riêng cho auth (register/login/refresh/me) — do `@qa` viết.
@@ -81,7 +94,8 @@ Request
 
 ## 10. Hạn chế / chưa làm
 - **Chưa có refresh token rotation / lưu refresh token** (nằm trong danh sách **CẮT** của `TASKLIST.md`) → chưa thu hồi được token.
-- **Chưa rate limit** login (thuộc hardening — Sprint 3).
+- **Rate limit dùng storage in-memory** — đủ cho demo một instance; nhiều instance cần storage chia sẻ (Redis) mới đếm đúng trên toàn cụm.
+- **Rate limit cho route quiz chưa gắn** — việc này đụng controller của `@learning`, đã tách khỏi `feat/auth` (xem ghi chú bàn giao trong `TASKLIST.md`).
 - **Swagger hoãn.**
 - **Chưa có test DB riêng cho e2e** (`@qa`).
 - `JWT_ACCESS_TTL`/`JWT_REFRESH_TTL` để mặc định trong code nếu env thiếu.

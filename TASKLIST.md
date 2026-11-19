@@ -103,11 +103,18 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [ ] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa`
 - [x] HealthModule (Postgres/Redis/MinIO): implementation + wiring + unit/probe local — `@learning`
 - [ ] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
+  - [x] CORS trong `configureApp` + `CORS_ORIGIN` (dùng chung runtime/e2e) — `@lead`
+  - [x] Rate limit toàn cục + siết `POST /auth/login` (5 req/60s, 429 sạch) — `@lead`
+  - [x] Ẩn field nhạy cảm: `@Exclude` `passwordHash` + test — `@lead`
+  - [ ] Rate limit route quiz — sửa trực tiếp controller `@learning`, **hoãn tới khi Lead yêu cầu** — `@lead` + `@learning`
 - [ ] e2e toàn hệ + script demo — `@qa`
 - [x] Demo Learning riêng: seed/start backend port 3002 và frontend Next.js port 3100, kết nối Auth/Progress/Quiz/Certificate — `@learning`
 - [ ] Mỗi người: viết `docs/<module>.md` giải thích kiến trúc module mình — **cả nhóm**
   - [x] Phần Learning: `docs/learning.md`, cập nhật `docs/learning-api.md` và hướng dẫn chạy `frontend/README.md` — `@learning`
+  - [x] Phần Auth: cập nhật `docs/auth.md` (hardening CORS/rate limit/serialize) — `@lead`
 - [x] Push origin + bật branch protection — `@lead`
+
+> Cập nhật **2026-11-19** (branch `feat/auth`): hoàn tất phần hardening thuộc `@lead` — CORS (`configureApp` + `CORS_ORIGIN`), rate limit (throttler toàn cục, login 5 req/60s), ẩn `passwordHash` (`@Exclude`). Kiểm tra local: `pnpm lint` sạch, **43 unit test + 1 integration throttler** qua, `pnpm build` qua, **1 e2e nền tảng** qua. Còn lại: rate limit route quiz (hoãn, sửa controller `@learning`) và e2e auth do `@qa`.
 
 ## Đã cắt (không làm trong 3 tuần)
 - Transcode HLS đa bitrate + ffmpeg
