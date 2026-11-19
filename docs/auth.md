@@ -74,7 +74,7 @@ Request
 `CreateUserDto`: `email` (IsEmail) · `password` (8..72) · `fullName` (1..255).
 `user` trả về: `{ id, email, fullName, role }` — **không** có `passwordHash`.
 
-Rate limit (vượt → 429): `login` **5 req/60s theo email**, `register` **10**, `refresh` **20**; quiz start attempt **10**, submit attempt **5** (theo tài khoản). Route đã xác thực đếm **theo tài khoản**, route công khai theo IP; mặc định toàn cục **100 req/60s**.
+Rate limit (vượt → 429): `login` **5 req/60s theo email**, `register` **10**, `refresh` **20**; quiz đọc **30**, start attempt **10**, submit attempt **5** (theo tài khoản). Route đã xác thực đếm **theo tài khoản**, route công khai theo IP; mặc định toàn cục **100 req/60s**.
 
 ## 7. Xử lý lỗi & edge case
 - **400** — DTO sai/thiếu (ValidationPipe `whitelist` + `forbidNonWhitelisted`).
@@ -87,7 +87,7 @@ Rate limit (vượt → 429): `login` **5 req/60s theo email**, `register` **10*
 ## 8. Test
 - **Unit:** `app.controller.spec.ts` (AppController/AppService) · `auth.service.spec.ts` (register/login/refresh + không lộ `passwordHash`) · `user.entity.spec.ts` (serialize cắt `passwordHash`) · `bootstrap.spec.ts` (CORS theo config, `resolveCorsOrigins`, `parseTrustProxy`).
 - **Unit (throttler storage):** `common/throttler-redis.storage.spec.ts` (map kết quả Lua → `ThrottlerStorageRecord`; fallback in-memory khi Redis lỗi; chọn storage theo `THROTTLE_STORAGE`/`THROTTLE_REDIS_URL`).
-- **Integration:** `auth-throttle.integration.spec.ts` (login/register/refresh trả 429 sau ngưỡng; email khác không bị khoá lây) · `attempts-throttle.integration.spec.ts` (quiz start/submit 429 theo từng tài khoản) · `common/trust-proxy.integration.spec.ts` (`trust proxy` bật thì đếm riêng theo client, tắt thì bỏ qua `X-Forwarded-For`) · `common/throttler-order.integration.spec.ts` (throttler chạy sau auth; request 401 không tiêu bucket; đếm riêng theo tài khoản).
+- **Integration:** `auth-throttle.integration.spec.ts` (login/register/refresh trả 429 sau ngưỡng; email khác không bị khoá lây) · `attempts-throttle.integration.spec.ts` (quiz start/submit 429 theo từng tài khoản) · `quizzes-throttle.integration.spec.ts` (đọc quiz 429 theo từng tài khoản) · `common/trust-proxy.integration.spec.ts` (`trust proxy` bật thì đếm riêng theo client, tắt thì bỏ qua `X-Forwarded-For`) · `common/throttler-order.integration.spec.ts` (throttler chạy sau auth; request 401 không tiêu bucket; đếm riêng theo tài khoản).
 - **e2e:** smoke `GET /v1` → `{ data: 'Hello World!' }` (dùng `configureApp`).
 - **Smoke thủ công:** register 201 (không lộ hash) · login OK · `/me` có token 200 / không token 401 · validation 400.
 - **Còn nợ:** e2e riêng cho auth (register/login/refresh/me) — do `@qa` viết.
