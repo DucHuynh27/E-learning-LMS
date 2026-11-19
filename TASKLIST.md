@@ -109,7 +109,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
   - [x] CORS trong `configureApp` + `CORS_ORIGIN` (dùng chung runtime/e2e) — `@lead`
   - [x] Rate limit: toàn cục + `login` (5, theo tài khoản) / `register` (10) / `refresh` (20), `trust proxy` cấu hình, 429 sạch — `@lead`
   - [x] Ẩn field nhạy cảm: `@Exclude` `passwordHash` + test — `@lead`
-  - [ ] Rate limit route quiz — sửa trực tiếp controller `@learning`, **hoãn tới khi Lead yêu cầu** — `@lead` + `@learning`
+  - [x] Rate limit route quiz: `@Throttle` 10 req/60s cho start/submit attempt — `@lead` + `@learning` (cần `@learning` review)
 - [ ] e2e toàn hệ + script demo — `@qa`
 - [x] Demo Learning riêng: seed/start backend port 3002 và frontend Next.js port 3100, kết nối Auth/Progress/Quiz/Certificate — `@learning`
 - [ ] Mỗi người: viết `docs/<module>.md` giải thích kiến trúc module mình — **cả nhóm**

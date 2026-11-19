@@ -17,6 +17,9 @@ export const REGISTER_THROTTLE = { ttl: 60_000, limit: 10 } as const;
 // Refresh access token xảy ra định kỳ nên rộng hơn login.
 export const REFRESH_THROTTLE = { ttl: 60_000, limit: 20 } as const;
 
+// Bắt đầu / nộp bài quiz: giới hạn theo IP để chặn spam, đủ rộng cho một lượt làm bài thật.
+export const QUIZ_ATTEMPT_THROTTLE = { ttl: 60_000, limit: 10 } as const;
+
 export const THROTTLE_ERROR_MESSAGE = 'Too many requests';
 
 // Login đếm theo tài khoản thay vì chỉ theo IP: chặn dò mật khẩu phân tán nhiều IP
