@@ -11,6 +11,7 @@ import { LearningInfrastructureDto } from '../learning/dto/learning-infrastructu
 @Injectable()
 export class HealthService {
   private readonly config: LearningInfrastructureDto;
+  private postgresQuery?: Promise<boolean>;
   constructor(
     @Inject(DataSource) private readonly source: DataSource,
     @Inject(ConfigService) config: ConfigService,
@@ -47,11 +48,18 @@ export class HealthService {
   private async postgres(): Promise<boolean> {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      return await Promise.race([
-        this.source
+      if (!this.postgresQuery) {
+        // A response timeout does not cancel SQL; retain the query until it settles.
+        this.postgresQuery = this.source
           .query('SELECT 1')
           .then(() => true)
-          .catch(() => false),
+          .catch(() => false)
+          .finally(() => {
+            this.postgresQuery = undefined;
+          });
+      }
+      return await Promise.race([
+        this.postgresQuery,
         new Promise<boolean>((resolve) => {
           timer = setTimeout(() => resolve(false), 1000);
           timer.unref();

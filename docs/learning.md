@@ -25,6 +25,8 @@ Redis chỉ còn phục vụ health. RedisHealthProbe dùng client redis chính 
 
 REDIS_HOST và MINIO_HOST phải có trong môi trường boot; mẫu local dùng localhost, container dùng redis/minio. REDIS_TLS mặc định false; REDIS_USERNAME hỗ trợ ACL. Không in credentials vào lỗi. /health trả 503 khi PostgreSQL/Redis/MinIO không sẵn sàng.
 
+PostgreSQL probe dùng chung tối đa một query đang chờ trong mỗi HealthService. Mỗi response vẫn có hạn 1 giây; timeout response không huỷ SQL nên query được giữ tới khi kết thúc, tránh dồn thêm truy vấn vào pool khi health bị gọi liên tục. Sau khi query kết thúc thành công hoặc lỗi, request kế tiếp được phép probe lại. Ba regression kiểm tra concurrency, timeout lặp lại và phục hồi sau kết quả đến muộn.
+
 ## File và build
 
 - progress/: đọc snapshot và PATCH tiến độ; certificates/: cấp và tra cứu; quizzes/ và attempts/: đề và chấm bài.
@@ -37,15 +39,15 @@ REDIS_HOST và MINIO_HOST phải có trong môi trường boot; mẫu local dùn
 
 | Nhóm | Số test | Môi trường và giới hạn |
 | --- | ---: | --- |
-| Backend unit/DTO/config/health | 34 | Unit; Redis client lifecycle được mock |
+| Backend unit/DTO/config/health | 37 | Unit; Redis lifecycle và PostgreSQL probe timeout/concurrency được mock |
 | Learning service integration | 22 | PostgreSQL 16 thật, Catalog fixtures |
 | Learning HTTP module integration | 10 | Auth/Learning thật, PostgreSQL; Catalog fixtures, health stub |
 | Regression GET chỉ đọc/không đợi writer lock | 2 | PostgreSQL 16 thật |
-| Tổng npm test backend | 68 | Không có describe.runIf hoặc test bị skip |
+| Tổng npm test backend | 71 | Không có describe.runIf hoặc test bị skip |
 | Frontend unit | 17 | Quiz 404, lỗi 401/403/500; storage bị chặn/hết dung lượng, dữ liệu lưu hỏng và deadline server |
 | E2E nền tảng (riêng) | 1 | Chỉ GET /v1; không phải nghiệm thu Learning |
 
-68 = 34 unit + 22 service + 10 HTTP + 2 regression. Các số 62/32 trước đây mô tả phiên bản cũ hoặc tập con; không dùng làm tổng của bản hiện tại.
+71 = 37 unit + 22 service + 10 HTTP + 2 regression. Ba unit test mới kiểm tra PostgreSQL health probe; các số ở CI lịch sử bên dưới gắn với commit đã chạy lúc đó, không phải tổng của bản hiện tại.
 
 Trong backend: npm test chạy toàn bộ và cần PostgreSQL, lỗi kết nối làm test thất bại. npm run test:unit là lựa chọn explicit không cần DB. Integration tự tạo/dọn schema ngẫu nhiên, không dùng dữ liệu demo/public. Bản kiểm tra local dùng PostgreSQL riêng ở port 55433; không đổi mật khẩu DB đang có.
 

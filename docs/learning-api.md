@@ -34,7 +34,7 @@
 | POST | `/v1/lessons/:lessonId/quiz/attempts` | enrolled STUDENT | — | 201 `{ attemptId, questions, startedAt, expiresAt }` |
 | POST | `/v1/quiz-attempts/:id/submit` | STUDENT (của mình) | `SubmitAttemptDto` | 200 `{ score, passed }` |
 | GET | `/v1/certificates/me` | Auth | — | 200 `[CertificateResponse]` |
-| GET | `/v1/certificates/:serialNo` | **Public** | — | 200 `CertificateResponse` |
+| GET | `/v1/certificates/:serialNo` | **Public** | — | 200 `PublicCertificateResponse` |
 | GET | `/v1/certificates/:serialNo/verify` | **Public** | — | 200 HTML xác thực chứng chỉ |
 | GET | `/v1/health` | **Public** | — | 200 `{ status:"ok", checks:{ postgres, redis, minio } }` hoặc 503 |
 

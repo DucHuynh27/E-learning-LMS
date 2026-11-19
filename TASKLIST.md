@@ -91,7 +91,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Chuẩn bị contract DB, các quyết định FK/cascade cần chốt và ma trận bàn giao QA tại [`docs/learning-integration.md`](docs/learning-integration.md) — `@learning`
 - [ ] Hỗ trợ + review + gỡ chặn — `@lead`
 
-> Kiểm tra local **2026-11-19**: **68 test backend = 34 unit + 22 service integration + 10 HTTP integration + 2 regression GET**, thêm **17 test frontend** và **1 e2e nền tảng** riêng. Các test DB dùng PostgreSQL 16 thật và Catalog fixtures. Xem docs/learning.md và docs/learning-review.md. Checkbox implementation không đồng nghĩa nghiệm thu tích hợp; Catalog thật/FK/cascade, Lead review và QA vẫn mở.
+> Bộ test hiện tại **2026-11-19**: **71 test backend = 37 unit + 22 service integration + 10 HTTP integration + 2 regression GET**, thêm **17 test frontend** và **1 e2e nền tảng** riêng. Đã chạy local 37 unit sau khi thêm ba regression PostgreSQL health; các test DB dùng PostgreSQL 16 thật và Catalog fixtures. Xem docs/learning.md và docs/learning-review.md. Checkbox implementation không đồng nghĩa nghiệm thu tích hợp; Catalog thật/FK/cascade, Lead review và QA vẫn mở.
 >
 > PR #10 đã merge bằng admin bypass theo ghi nhận Lead, không phải approval hoặc QA ký. Các issue của Lead #11/#12/#18/#27 tiếp tục chờ owner xác nhận; cấu hình CI/config được chuẩn bị riêng để review.
 >
@@ -104,6 +104,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Certificate: entity + tự phát khi học đủ mọi lesson published (idempotent) + JSON/HTML tra cứu, unit/integration — `@learning`
 - [ ] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa`
 - [x] HealthModule (Postgres/Redis/MinIO): implementation + wiring + unit/probe local — `@learning`
+- [x] PostgreSQL health probe dùng chung query đang chờ, giữ hạn response 1 giây và phục hồi sau kết quả muộn; ba regression concurrency/timeout — `@learning`
 - [ ] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
 - [ ] e2e toàn hệ + script demo — `@qa`
 - [x] Demo Learning riêng: seed/start backend port 3002 và frontend Next.js port 3100, kết nối Auth/Progress/Quiz/Certificate — `@learning`
