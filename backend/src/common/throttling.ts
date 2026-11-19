@@ -19,6 +19,9 @@ export const REFRESH_THROTTLE = { ttl: 60_000, limit: 20 } as const;
 export const QUIZ_START_THROTTLE = { ttl: 60_000, limit: 10 } as const;
 export const QUIZ_SUBMIT_THROTTLE = { ttl: 60_000, limit: 5 } as const;
 
+// Đọc quiz là thao tác nhẹ và có thể lặp khi dashboard tải lại: ngưỡng rộng.
+export const QUIZ_READ_THROTTLE = { ttl: 60_000, limit: 30 } as const;
+
 export const THROTTLE_ERROR_MESSAGE = 'Too many requests';
 
 type RequestWithUser = {
