@@ -1,6 +1,7 @@
 import {
   CanActivate,
   Controller,
+  ExecutionContext,
   Get,
   HttpException,
   HttpStatus,
@@ -18,16 +19,20 @@ import { throttlerRootOptions } from './throttling.js';
 
 const LIMIT = 2;
 
-// Đóng vai guard xác thực ở module con: chặn request chưa đăng nhập bằng 401.
+// Đóng vai guard xác thực: gắn req.user theo header, 401 nếu thiếu.
 @Injectable()
-class RejectGuard implements CanActivate {
-  canActivate(): boolean {
-    throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+class StubAuthGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const req = context.switchToHttp().getRequest<{
+      headers: Record<string, string | undefined>;
+      user?: { userId: string };
+    }>();
+    const userId = req.headers['x-user'];
+    if (!userId) throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    req.user = { userId };
+    return true;
   }
 }
-
-@Module({ providers: [{ provide: APP_GUARD, useClass: RejectGuard }] })
-class ChildGuardModule {}
 
 @Controller('probe')
 class ProbeController {
@@ -39,13 +44,17 @@ class ProbeController {
 }
 
 @Module({
-  imports: [ChildGuardModule, ThrottlerModule.forRoot(throttlerRootOptions())],
+  imports: [ThrottlerModule.forRoot(throttlerRootOptions())],
   controllers: [ProbeController],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: StubAuthGuard },
+    // Throttler đặt sau auth guard: chạy sau khi req.user đã có.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 class RootModule {}
 
-describe('Thứ tự guard toàn cục (integration)', () => {
+describe('Thứ tự guard & key throttle (integration)', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
@@ -61,11 +70,24 @@ describe('Thứ tự guard toàn cục (integration)', () => {
     await app.close();
   });
 
-  it('đếm cả request bị guard module con từ chối (throttler chạy trước)', async () => {
-    for (let i = 0; i < LIMIT; i++) {
-      await request(app.getHttpServer()).get('/v1/probe').expect(401);
+  const hit = (userId?: string) => {
+    const req = request(app.getHttpServer()).get('/v1/probe');
+    return userId ? req.set('x-user', userId) : req;
+  };
+
+  it('request bị auth từ chối (401) không tiêu bucket', async () => {
+    // Nếu throttler chạy trước auth thì sớm muộn sẽ có 429; ở đây phải mãi là 401.
+    for (let i = 0; i < LIMIT + 5; i++) {
+      await hit().expect(401);
     }
-    // Nếu throttler chạy sau guard 401 thì request này sẽ mãi là 401, không bao giờ 429.
-    await request(app.getHttpServer()).get('/v1/probe').expect(429);
+  });
+
+  it('đếm riêng theo từng tài khoản', async () => {
+    for (let i = 0; i < LIMIT; i++) {
+      await hit('user-a').expect(200);
+    }
+    await hit('user-a').expect(429);
+    // Tài khoản khác có bucket riêng.
+    await hit('user-b').expect(200);
   });
 });

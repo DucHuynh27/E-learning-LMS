@@ -77,7 +77,7 @@ PublicCertificateResponse { serialNo, courseId, issuedAt } // JSON public và HT
 | 403 | Chưa enroll, hoặc không phải chủ attempt |
 | 404 | Lesson/Quiz/Attempt/Certificate không tồn tại |
 | 409 | Nộp attempt đã submit / vượt số lần cho phép |
-| 429 | Vượt rate limit HTTP của start/submit attempt (10 req/60s mỗi IP, ThrottlerGuard toàn cục) |
+| 429 | Vượt rate limit HTTP của start/submit attempt (start 10, submit 5 req/60s mỗi tài khoản, ThrottlerGuard toàn cục) |
 | 503 | Catalog chưa có schema cần thiết, hoặc một dịch vụ trong health check không sẵn sàng |
 
 ## 9. Ghi chú cho @qa

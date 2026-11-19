@@ -17,13 +17,27 @@ export const REGISTER_THROTTLE = { ttl: 60_000, limit: 10 } as const;
 // Refresh access token xảy ra định kỳ nên rộng hơn login.
 export const REFRESH_THROTTLE = { ttl: 60_000, limit: 20 } as const;
 
-// Bắt đầu / nộp bài quiz: giới hạn theo IP để chặn spam, đủ rộng cho một lượt làm bài thật.
-export const QUIZ_ATTEMPT_THROTTLE = { ttl: 60_000, limit: 10 } as const;
+// Bắt attempt rẻ và có thể lặp; submit là điểm nhạy cảm nên siết chặt hơn.
+export const QUIZ_START_THROTTLE = { ttl: 60_000, limit: 10 } as const;
+export const QUIZ_SUBMIT_THROTTLE = { ttl: 60_000, limit: 5 } as const;
 
 export const THROTTLE_ERROR_MESSAGE = 'Too many requests';
 
-// Login đếm theo tài khoản thay vì chỉ theo IP: chặn dò mật khẩu phân tán nhiều IP
-// vào cùng một email, đồng thời không khoá lây người dùng chung NAT.
+type RequestWithUser = {
+  user?: { userId?: string };
+  ip?: string;
+};
+
+// Tracker mặc định: đếm theo tài khoản khi request đã xác thực, ngược lại theo IP.
+// ThrottlerGuard chạy sau guard xác thực nên `req.user` đã sẵn có — nhờ vậy nhiều
+// học viên chung một IP (NAT, proxy) vẫn có bucket riêng.
+export const accountOrIpTracker: ThrottlerGetTrackerFunction = (req) => {
+  const userId = (req as RequestWithUser).user?.userId;
+  return userId ? `user:${userId}` : `ip:${String((req as RequestWithUser).ip)}`;
+};
+
+// Login là route công khai (chưa có user): đếm theo tài khoản đang nhắm tới qua email,
+// chặn dò mật khẩu phân tán nhiều IP vào cùng account.
 export const loginTracker: ThrottlerGetTrackerFunction = (req) => {
   const email =
     typeof req.body?.email === 'string'
@@ -59,6 +73,7 @@ export function throttlerRootOptions(
   const storage = createThrottlerStorage(config);
   return {
     errorMessage: THROTTLE_ERROR_MESSAGE,
+    getTracker: accountOrIpTracker,
     throttlers: [{ ...GLOBAL_THROTTLE }],
     ...(storage ? { storage } : {}),
   };
