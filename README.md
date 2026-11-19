@@ -20,35 +20,39 @@ Modular Monolith — mỗi domain là một module độc lập, **mỗi module 
 
 ## Module & Owner
 
-| Module                                                                                                                      | Owner                                               | Vai trò       | Phạm vi chính                                         |
-| --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------- | ----------------------------------------------------- |
-| `TypeOrmModule`, `ConfigModule` (EnvVars), `AuthModule`, `UsersModule`, cross-cutting (pipes/filters/interceptors), Swagger | Huỳnh Kim Đức - **Lead** _(kiêm PM/PO/BA, có code)_ | Nền tảng      | DataSource + migration, JWT/RBAC, chuẩn hóa tầng I/O  |
-| `CoursesModule`, `SectionsModule`, `LessonsModule`, `EnrolmentsModule`                                                      |                                                     | Content       | CRUD khóa học/học liệu, phân quyền Instructor/Student |
-| `UploadsModule`, `MediaModule`, `BullModule` config, `S3Module`, transcode worker                                           |                                                     | Infra / Media | Presigned URL, ffmpeg worker, HLS + thumbnail         |
-| `ProgressModule`, `CertificatesModule`, `QuizzesModule`, `AttemptsModule`                                                   |                                                     | Learning      | Tiến độ, phát chứng chỉ, thi & chấm điểm server-side  |
-| `QnaModule`, `NotificationsModule`, `WsGateway` + **toàn bộ e2e test**                                                      | **QA**                                              | Realtime + QA | Q&A real-time, thông báo, e2e xuyên module            |
+| Module | Owner | Vai trò | Phạm vi chính |
+| --- | --- | --- | --- |
+| `TypeOrmModule`, `ConfigModule` (EnvVars), `AuthModule`, `UsersModule`, cross-cutting (pipes/filters/interceptors), Swagger | **Huỳnh Kim Đức — Lead** (`@lead`, kiêm PM/PO/BA) · [Hướng dẫn](prompt/lead/AGENTS.md) | Nền tảng | DataSource + migration nền tảng, JWT/RBAC, chuẩn hóa tầng I/O, review thay đổi cross-cutting |
+| `CoursesModule`, `SectionsModule`, `LessonsModule`, `EnrolmentsModule` | **Dev Content** (`@content`) · [Hướng dẫn](prompt/dev-content/AGENTS.md) | Content | CRUD khóa học/section/lesson, publish, enrolment, phân quyền Instructor/Student |
+| `UploadsModule`, `MediaModule`, cấu hình `BullModule`, `S3Module`, worker thumbnail | **Dev Media** (`@media`) · [Hướng dẫn](prompt/dev-media/AGENTS.md) | Infra / Media | Upload/playback qua presigned URL MinIO, metadata video, một job BullMQ sinh thumbnail |
+| `ProgressModule`, `CertificatesModule`, `QuizzesModule`, `AttemptsModule`, `HealthModule` | **Dev Learning** (`@learning`) · [Hướng dẫn](prompt/dev-learning/AGENTS.md) | Learning | Tiến độ học tập, chứng chỉ dạng record + tra cứu, quiz chấm server-side và giới hạn lượt/thời gian, health check |
+| `QnaModule`, `NotificationsModule`, `WsGateway` + **toàn bộ e2e test** | **QA Realtime** (`@qa`) · [Hướng dẫn](prompt/qa-realtime/AGENTS.md) | Realtime + QA | Q&A real-time tối thiểu, room theo course, DB test riêng và e2e xuyên module |
 
-### Rủi ro đã biết — module Media (Dev 2)
+Các owner chưa có tên thành viên dùng handle thống nhất với [`TASKLIST.md`](TASKLIST.md); điền tên thật khi nhóm chốt nhân sự. Mỗi owner phụ trách cả migration, unit/integration test và tài liệu của module mình; QA phụ trách e2e. Lead duyệt thay đổi cross-cutting.
+
+Phạm vi theo [`TASKLIST.md`](TASKLIST.md): không triển khai HLS đa bitrate, PDF/email chứng chỉ hoặc notification đầy đủ; Swagger đang hoãn.
+
+### Rủi ro đã biết — module Media (`@media`)
 
 - Kinh nghiệm ffmpeg/S3: **pair với Lead** + nhờ hỗ trợ giảng viên.
-- Media là module rủi ro cao nhất → cần spike sớm ở Phase 2, không để tới cuối.
+- Media là module rủi ro cao nhất → spike upload presigned URL ngay Sprint 1, không để tới cuối.
 
 ## Roadmap theo giai đoạn
 
 | Phase                           | Mục tiêu                                     | Owner chính    |
 | ------------------------------- | -------------------------------------------- | -------------- |
 | 0. Foundation                   | TypeORM + Config + Auth + RBAC + Health + CI | Lead + cả nhóm |
-| 1. Catalog & Content            | Course/Section/Lesson + Enrolment            | Dev 1          |
-| 2. Media Pipeline               | Upload → BullMQ → ffmpeg → S3                | Dev 2          |
-| 3. Progress & Certificate       | % hoàn thành + phát chứng chỉ tự động        | Dev 3          |
-| 4. Quiz                         | Thi, chấm điểm, giới hạn lượt/thời gian      | Dev 3          |
-| 5. Realtime Q&A & Notifications | Socket.io, room theo course                  | QA             |
+| 1. Catalog & Content            | Course/Section/Lesson + Enrolment            | `@content`     |
+| 2. Media Pipeline               | Upload MinIO → BullMQ → thumbnail            | `@media`       |
+| 3. Progress & Certificate       | % hoàn thành + chứng chỉ record và tra cứu  | `@learning`    |
+| 4. Quiz                         | Thi, chấm điểm, giới hạn lượt/thời gian      | `@learning`    |
+| 5. Realtime Q&A & Notifications | Socket.io, room theo course                  | `@qa`          |
 | 6. Hardening                    | Rate limit, caching, observability, e2e      | Cả nhóm        |
 
 ## Quy ước làm việc
 
 - **Hợp đồng trước, code sau**: chốt DTO + route spec trước khi implement.
-- **Branch theo module**: `feat/auth`, `feat/media`, `feat/quiz`, …
+- **Branch theo module**: `feat/auth`, `feat/content`, `feat/media`, `feat/learning`, `feat/realtime`.
 - **PR rule**: cần ≥1 reviewer; PR đụng cross-cutting (auth, config, base entity) do **Lead** duyệt.
 - **Definition of Done**: API chạy + e2e xanh + phân quyền đúng role, **QA ký**.
 - **Test ownership**: Dev viết unit/integration; QA viết e2e.

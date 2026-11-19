@@ -15,7 +15,7 @@ Mục đích: mỗi người viết **một file giải thích module mình ph�
 | [`auth.md`](auth.md) | @lead | Auth/RBAC + cross-cutting + config | ⬜ |
 | [`catalog.md`](catalog.md) | @content | Courses/Sections/Lessons/Enrolments | ⬜ |
 | [`media.md`](media.md) | @media | Uploads/Media/Bull/S3 | ⬜ |
-| [`learning.md`](learning.md) | @learning | Progress/Certificates/Quizzes/Attempts | ⬜ |
+| [`learning.md`](learning.md) | @learning | Progress/Certificates/Quizzes/Attempts/Health | Đã viết; chờ tích hợp và QA |
 | [`qa-realtime.md`](qa-realtime.md) | @qa | QnA/Notifications/WsGateway + e2e | ⬜ |
 
 ## Hợp đồng API (spec)

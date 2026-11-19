@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# E-Learning frontend
 
-## Getting Started
+Trang chủ `/` dùng scaffold của nhóm. Không gian Learning ở `/learning`, có CSS riêng để giữ giao diện trang chủ khi chuyển trang.
 
-First, run the development server:
+Next.js cho giao diện học viên, kết nối API NestJS qua proxy `/api/*`. Gồm đăng nhập, cập nhật tiến độ hai bài học, quiz có đếm giờ và trang xác thực chứng chỉ. Thời gian xem video được mô phỏng bằng thanh trượt; chưa có phát video.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Chạy bản demo local
+
+Yêu cầu: đã cài dependencies theo `pnpm-lock.yaml` của backend/frontend, tạo `backend/.env`, chạy hạ tầng Compose và migration nền tảng theo README gốc. Không cần cài package toàn cục để chạy các lệnh dưới đây.
+
+Terminal backend, từ root repo:
+
+```powershell
+cd backend
+npm run demo:seed
+npm run demo:start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`demo:seed` build backend, tạo fixtures trong schema PostgreSQL `learning_demo`, chạy migration Learning và tạo tài khoản mẫu. Chạy lại không xoá tiến độ, chứng chỉ hoặc lượt quiz đã có. Script không thêm dữ liệu vào các bảng người dùng của schema `public`; bảng `public.users` cần tồn tại để tạo cấu trúc users cho demo.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Terminal frontend, từ root repo:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```powershell
+cd frontend
+Copy-Item .env.example .env.local
+# Đổi LMS_API_URL trong .env.local thành http://127.0.0.1:3002 cho bản demo
+npm run dev -- --port 3100
+```
 
-## Learn More
+- Frontend: `http://localhost:3100/learning`
+- Backend demo: `http://localhost:3002/v1/health`
+- Học viên: `student@lms.demo` / `LmsDemo2026!` (đã điền sẵn trên giao diện).
+- Giảng viên seed: `teacher@lms.demo` / `LmsDemo2026!`.
 
-To learn more about Next.js, take a look at the following resources:
+Course/Lesson/Enrolment là fixtures theo contract Catalog, không phải implementation của nhóm Content. Progress, Quiz, Attempt, Certificate và Auth gọi backend NestJS thật. Các UUID trong `lib/learning-demo.ts` khớp với script seed; màn hình này dành cho khóa demo cố định, chưa có danh sách khóa học động.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Mỗi quiz tối đa 3 lượt; các lượt hết giờ vẫn tính vào giới hạn. Frontend giữ token trong bộ nhớ, cần đăng nhập lại sau khi tải lại trang. Lượt quiz đang mở được lưu theo user trong `sessionStorage` để tiếp tục sau khi đăng nhập lại.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Đồng hồ quiz dùng `expiresAt` do backend trả khi bắt đầu lượt; không cộng lại thời gian từ lúc nhận response. `expiresAt: null` là lượt không giới hạn. Backend vẫn kiểm tra deadline độc lập khi nộp bài.
 
-## Deploy on Vercel
+## Kết nối backend thông thường
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`.env.example` mặc định trỏ tới API port 3000. `LMS_API_URL` là cấu hình phía server của Next.js; thay đổi cần khởi động lại frontend. Mọi request `/api/...` được proxy tới `/v1/...`, nên không cần thêm CORS chỉ để chạy giao diện local. Các luồng học tập vẫn cần dữ liệu Catalog/enrolment tương ứng.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Kiểm tra
+
+```powershell
+npm run lint
+npm run build
+```
+
+Sử dụng dependencies trong `frontend/node_modules`; không đưa `.env.local`, token, cache hoặc `node_modules` vào Git.

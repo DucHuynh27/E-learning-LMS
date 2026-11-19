@@ -24,4 +24,3 @@ function Heading({level = "h1", className, ...props}: HeadingProps) {
 }
 
 export {Heading, headingVariants};
-

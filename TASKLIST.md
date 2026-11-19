@@ -12,6 +12,7 @@ Kế hoạch thực thi E-Learning LMS trong **3 tuần** (mỗi người ~20h/t
 ## Quy ước
 
 - Trạng thái: `- [ ]` chưa làm · `- [ ]` + **(đang làm)** đang làm · `- [x]` xong.
+- Tick theo đúng phạm vi từng dòng: phần implementation/unit/integration đã xong được tick riêng; tích hợp với module thật, review và nghiệm thu QA/e2e vẫn là các task chưa tick cho tới khi hoàn tất.
 - Owner ghi bằng **handle**; tra cứu ở bảng dưới.
 - Sprint kết thúc khi đạt **exit criteria**, không cứng theo ngày (độ dài tùy độ khó).
 - Mỗi PR cập nhật trạng thái trong file này.
@@ -72,26 +73,40 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 
 **Exit criteria:** % tiến độ cập nhật đúng · video hiện diện `READY` (hoặc upload+serve) · nộp quiz ra điểm.
 
-- [ ] Entity LessonProgress + PATCH progress (ngưỡng 0.9) — `@learning`
-- [ ] Tính `progressPct` + update Enrolment (nêu rõ lý do index) — `@learning`
-- [ ] Entity Quiz/Question/Option + tạo quiz — `@learning`
-- [ ] Entity QuizAttempt/QuizAnswer + API nộp bài, chấm server-side — `@learning`
+- [x] Entity LessonProgress + PATCH progress (ngưỡng 0.9), unit/integration — `@learning`
+- [x] Tính `progressPct` + update Enrolment, cache tổng lesson published và giải thích index — `@learning`
+- [x] Entity Quiz/Question/Option + API tạo/thay quiz đúng owner, ẩn đáp án đúng — `@learning`
+- [x] Entity QuizAttempt/QuizAnswer + API nộp bài, chấm server-side, giới hạn lượt/thời gian và chống nộp trùng — `@learning`
+- [x] Kiểm thử HTTP module Learning: JWT/role, DTO, envelope/lỗi, chấm điểm, deadline/lượt thi và chứng chỉ public với PostgreSQL + fixtures Catalog — `@learning`
+- [x] Sửa lỗi snapshot khi đọc/sửa quiz đồng thời, deadline tổng Redis và cache cũ làm tụt trạng thái khoá đã hoàn thành; có test hồi quy — `@learning`
+- [x] Đồng bộ frontend scaffold từ `main`, tách dashboard `/learning` và dùng deadline quiz do PostgreSQL cấp, kiểm tra HTTP/integration cho deadline và lượt không giới hạn — `@learning`
 - [ ] S3Module (MinIO `forcePathStyle`) + UploadsModule — `@media`
 - [ ] MediaModule: lưu metadata + serve presigned GET — `@media`
 - [ ] BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`
 - [ ] e2e cho progress + quiz — `@qa`
+- [ ] Tích hợp Learning với schema/module Catalog thật và chốt FK/cascade tới Course/Lesson — `@learning` + `@content` + `@lead`
+- [x] Cấu hình `LEARNING_DB_TESTS=1` cho integration PostgreSQL trong CI, đợi DB healthy và giữ lỗi test làm job thất bại; đã chạy đúng lệnh CI qua 32 test local — `@learning` (chờ Lead review workflow)
+- [x] Chuẩn bị contract DB, các quyết định FK/cascade cần chốt và ma trận bàn giao QA tại [`docs/learning-integration.md`](docs/learning-integration.md) — `@learning`
 - [ ] Hỗ trợ + review + gỡ chặn — `@lead`
+
+> Rà soát ngày **2026-11-08**: phần implementation Learning chạy với fixtures Catalog trong schema riêng. Kiểm tra local ngày 2026-11-08: **62 test** (gồm 22 integration service PostgreSQL và 10 HTTP module integration), **1 e2e nền tảng**, lint/build/TypeScript backend đều qua. Frontend không thay đổi trong lần rà soát này; lint/build frontend đã qua ở lần kiểm tra 2026-11-07. E2E nền tảng và module integration với fixtures chưa thay thế nghiệm thu QA với Catalog thật.
+>
+> Bàn giao: xem [`docs/learning.md`](docs/learning.md) và [`docs/learning-wiring.patch`](docs/learning-wiring.patch). Wiring đã được áp dụng; vẫn cần Lead review `AppModule`/`DataSource`, Content cung cấp schema thật và QA xác nhận e2e trước khi nghiệm thu Done toàn hệ thống.
+
+> Cập nhật **2026-11-17**: thêm bước Learning PostgreSQL integration vào CI, đã kiểm tra local với pnpm 12.11.2: **32/32 test integration** qua, không skip. GitHub Actions cần xác nhận trên PR. Sau fetch, `origin/feat/content` vẫn ở `c76b1b4`; phần Catalog thật/FK/cascade và QA e2e tiếp tục để mở.
 
 ## Sprint 3 — Certificate + Realtime + Hardening (Tuần 3)
 
 **Exit criteria:** đạt 100% phát chứng chỉ (record + trang tra cứu) · Q&A realtime tối thiểu · demo chạy end-to-end.
 
-- [ ] Certificate: entity + tự phát khi `progressPct == 100` (idempotent) + HTML tra cứu — `@learning`
+- [x] Certificate: entity + tự phát khi học đủ mọi lesson published (idempotent) + JSON/HTML tra cứu, unit/integration — `@learning`
 - [ ] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa`
-- [ ] HealthModule (Postgres/Redis/MinIO) — `@learning`
+- [x] HealthModule (Postgres/Redis/MinIO): implementation + wiring + unit/probe local — `@learning`
 - [ ] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
 - [ ] e2e toàn hệ + script demo — `@qa`
+- [x] Demo Learning riêng: seed/start backend port 3002 và frontend Next.js port 3100, kết nối Auth/Progress/Quiz/Certificate — `@learning`
 - [ ] Mỗi người: viết `docs/<module>.md` giải thích kiến trúc module mình — **cả nhóm**
+  - [x] Phần Learning: `docs/learning.md`, cập nhật `docs/learning-api.md` và hướng dẫn chạy `frontend/README.md` — `@learning`
 - [x] Push origin + bật branch protection — `@lead`
 
 ## Đã cắt (không làm trong 3 tuần)
