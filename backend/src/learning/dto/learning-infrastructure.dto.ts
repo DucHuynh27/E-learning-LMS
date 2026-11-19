@@ -1,6 +1,7 @@
 import type { ConfigService } from '@nestjs/config';
 import {
   IsInt,
+  IsBoolean,
   IsNotEmpty,
   IsString,
   Max,
@@ -12,6 +13,8 @@ export class LearningInfrastructureDto {
   @IsString() @IsNotEmpty() redisHost: string;
   @IsInt() @Min(1) @Max(65535) redisPort: number;
   @IsString() redisPassword: string;
+  @IsString() redisUsername: string;
+  @IsBoolean() redisTls: boolean;
   @IsString() @IsNotEmpty() minioHost: string;
   @IsInt() @Min(1) @Max(65535) minioPort: number;
 
@@ -20,6 +23,13 @@ export class LearningInfrastructureDto {
       redisHost: config.get<string>('REDIS_HOST') ?? 'localhost',
       redisPort: Number(config.get('REDIS_PORT') ?? 6379),
       redisPassword: config.get<string>('REDIS_PASSWORD') ?? '',
+      redisUsername: config.get<string>('REDIS_USERNAME') ?? '',
+      redisTls:
+        config.get('REDIS_TLS') === 'true'
+          ? true
+          : config.get('REDIS_TLS') === 'false'
+            ? false
+            : (config.get('REDIS_TLS') ?? false),
       minioHost: config.get<string>('MINIO_HOST') ?? 'localhost',
       minioPort: Number(config.get('MINIO_API_PORT') ?? 9000),
     });

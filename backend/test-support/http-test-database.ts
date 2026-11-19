@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { DataSource } from 'typeorm';
-import { User } from '../../user/user.entity.js';
-import { Learning1794050000000 } from '../../database/migrations/1794050000000-Learning.js';
-import { LEARNING_ENTITIES } from '../learning.entities.js';
+import { User } from '../src/user/user.entity.js';
+import { Learning1794050000000 } from '../src/database/migrations/1794050000000-Learning.js';
+import { LEARNING_ENTITIES } from '../src/learning/learning.entities.js';
 
 export async function createHttpTestDatabase(): Promise<DataSource> {
   const schema = `learning_http_${randomUUID().replaceAll('-', '')}`;

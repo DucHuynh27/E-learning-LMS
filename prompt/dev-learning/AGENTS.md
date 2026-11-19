@@ -22,20 +22,20 @@ Sở hữu logic nghiệp vụ dày nhất: **tiến độ học tập + chứng
 ```
 Xem video → PATCH progress {watchedSec}
   watchedSec >= 0.9*duration → completed = true
-     → đếm lesson published (cache Redis) & đã hoàn thành (index sẵn)
+     → đếm lesson published từ PostgreSQL & đã hoàn thành (index sẵn)
      → progressPct = round(completed/published*100) → update Enrolment
      → nếu hoàn thành đủ mọi lesson published (>0) → cấp Certificate record idempotent
         → tra cứu public JSON/HTML theo serialNo
 ```
 
 ## Nguyên tắc tối ưu
-- Không `COUNT(*)` toàn bảng mỗi request — giữ tổng lesson published trong **Redis**.
+- Aggregate giới hạn theo course và index Catalog; không dùng cache/TTL vào điều kiện chứng chỉ và không gọi Redis trong transaction.
 - Chứng chỉ idempotent nhờ unique `(userId, courseId)` trong PostgreSQL; serial và ngày cấp được giữ nguyên khi gọi lại.
 - Quiz **chấm server-side tuyệt đối**, giới hạn số lần & thời gian.
 
 ## Phụ thuộc
 - **Dev Content** (`Enrolment`, `Lesson`), **Dev Media** (`Video` cho duration).
-- Khi tích hợp Catalog thật: chốt FK/cascade và invalidation cache tổng bài published với `@content`/Lead.
+- Khi tích hợp Catalog thật: chốt FK/cascade với `@content`/Lead. Tổng progress đọc PostgreSQL, không cần cache invalidation.
 - BullMQ/CertificateQueue không phải phụ thuộc của scope chứng chỉ record hiện tại.
 
 ## Definition of Done
@@ -46,7 +46,7 @@ Progress cập nhật đúng %, chứng chỉ tự phát khi đạt 100%, quiz c
 - [x] Chính sách quiz: tối đa 3 lượt bắt đầu, tính cả hết giờ; chấm server-side, kiểm tra deadline và chống nộp trùng.
 - [x] Implementation Progress/Certificate/Quiz/Attempt/Health, wiring, migration và bản demo local.
 - [x] Test HTTP module với Auth/JWT/role/DTO thật và test hồi quy snapshot quiz, timeout Redis, cache cũ; vẫn dùng fixtures Catalog riêng.
-- [x] Cấu hình CI chạy 32 test integration PostgreSQL với `LEARNING_DB_TESTS=1`, đợi DB healthy; đã kiểm tra local bằng pnpm, chờ Lead review workflow và kết quả GitHub Actions trên PR.
+- [ ] Lead review/xác nhận CI và required checks cho backend/frontend (#11/#12). Implementation và số test hiện tại xem docs/learning.md.
 - [ ] Tích hợp với Course/Lesson/Enrolment thật và FK/cascade — phối hợp `@content` + Lead; nhánh Content hiện chưa có implementation.
 - [ ] Lead review thay đổi cross-cutting và QA nghiệm thu e2e toàn hệ thống.
 

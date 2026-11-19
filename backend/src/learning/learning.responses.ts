@@ -19,16 +19,22 @@ export class LessonProgressResponse {
   }
 }
 
-export class CertificateResponse {
+export class PublicCertificateResponse {
   serialNo: string;
   courseId: string;
-  userId: string;
   issuedAt: Date;
   constructor(certificate: Certificate) {
     this.serialNo = certificate.serialNo;
     this.courseId = certificate.courseId;
-    this.userId = certificate.userId;
     this.issuedAt = certificate.issuedAt;
+  }
+}
+
+export class CertificateResponse extends PublicCertificateResponse {
+  userId: string;
+  constructor(certificate: Certificate) {
+    super(certificate);
+    this.userId = certificate.userId;
   }
 }
 

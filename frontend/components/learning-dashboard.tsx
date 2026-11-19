@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -33,15 +32,32 @@ import {
 } from "@/lib/learning-api";
 import { demoAccount, demoCourse } from "@/lib/learning-demo";
 
-type ActiveAttempt = Attempt & { deadline: number | null };
+import {
+  loadLearningSnapshot,
+  restoreAttempt,
+  forgetAttempt,
+  type ActiveAttempt,
+} from "@/lib/learning-state";
+import styles from "./learning-dashboard.module.css";
+
+function css(names: string): string {
+  return names
+    .split(/\s+/)
+    .map(
+      (name) =>
+        styles[name.startsWith("learning-") ? name : `learning-${name}`],
+    )
+    .filter(Boolean)
+    .join(" ");
+}
 const emptyProgress: CourseProgress = { progressPct: 0, lessons: [] };
 
 function messageFor(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 401)
       return "Thông tin đăng nhập chưa đúng hoặc phiên đã hết hạn. Vui lòng đăng nhập lại.";
-    if (error.message.includes("Maximum of 3"))
-      return "Bạn đã dùng đủ 3 lượt làm bài của quiz này.";
+    if (error.message.startsWith("Maximum of "))
+      return "Bạn đã dùng hết lượt làm bài của quiz này.";
     if (error.message.includes("active attempt"))
       return "Bạn đang có một lượt làm bài chưa nộp. Hãy hoàn tất lượt đang mở hoặc chờ hết thời gian.";
     if (error.message.includes("time limit"))
@@ -95,14 +111,14 @@ export function LearningDashboard() {
   }, [attempt]);
 
   async function loadSnapshot(token: string) {
-    const [course, issued, currentQuiz] = await Promise.all([
-      api<CourseProgress>(`/enrolments/${demoCourse.id}/progress`, token),
-      api<Certificate[]>("/certificates/me", token),
-      api<Quiz>(`/lessons/${demoCourse.quizLessonId}/quiz`, token),
-    ]);
-    setProgress(course);
-    setCertificates(issued);
-    setQuiz(currentQuiz);
+    const snapshot = await loadLearningSnapshot(
+      token,
+      demoCourse.id,
+      demoCourse.quizLessonId,
+    );
+    setProgress(snapshot.course);
+    setCertificates(snapshot.certificates);
+    setQuiz(snapshot.quiz);
   }
 
   async function task(name: string, work: () => Promise<void>) {
@@ -112,6 +128,15 @@ export function LearningDashboard() {
     try {
       await work();
     } catch (caught) {
+      if (
+        session &&
+        caught instanceof ApiError &&
+        caught.status === 409 &&
+        caught.message.includes("already been submitted")
+      ) {
+        forgetAttempt(sessionStorage, session.user.id);
+        setAttempt(null);
+      }
       setError(messageFor(caught));
     } finally {
       setBusy("");
@@ -127,28 +152,14 @@ export function LearningDashboard() {
       });
       setSession(data);
       await loadSnapshot(data.accessToken);
-      const saved = sessionStorage.getItem(`lms-attempt:${data.user.id}`);
-      if (saved) {
-        try {
-          const restored = JSON.parse(saved) as ActiveAttempt;
-          if (
-            typeof restored.attemptId === "string" &&
-            Array.isArray(restored.questions) &&
-            (restored.deadline === null ||
-              typeof restored.deadline === "number")
-          ) {
-            setAttempt(restored);
-            setNow(Date.now());
-          }
-        } catch {
-          sessionStorage.removeItem(`lms-attempt:${data.user.id}`);
-        }
-      }
+      setAttempt(restoreAttempt(sessionStorage, data.user.id));
+      setNow(Date.now());
       setNotice(`Chào ${data.user.fullName}, lớp học đã sẵn sàng.`);
     });
   }
 
   function signOut() {
+    if (session) forgetAttempt(sessionStorage, session.user.id);
     setSession(null);
     setProgress(emptyProgress);
     setCertificates([]);
@@ -180,7 +191,7 @@ export function LearningDashboard() {
   }
 
   function startQuiz() {
-    if (!session) return;
+    if (!session || !quiz) return;
     void task("start", async () => {
       const started = await api<Attempt>(
         `/lessons/${demoCourse.quizLessonId}/quiz/attempts`,
@@ -238,74 +249,53 @@ export function LearningDashboard() {
   );
 
   return (
-    <div className="learning-app">
-      <header className="site-header">
-        <Link className="brand" href="/" aria-label="E-Learning LMS, trang chủ">
-          <span className="brand-mark">
-            <BookOpen size={23} />
-          </span>
-          <span>
-            E-learning<span className="brand-dot">.</span>
-            <small>LEARNING SPACE</small>
-          </span>
-        </Link>
-        <nav aria-label="Điều hướng chính">
-          <a className="nav-active" href="#lessons">
-            Lớp học
-          </a>
-          <a href="#quiz">Bài kiểm tra</a>
-          <a href="#certificates">Chứng chỉ</a>
-        </nav>
-        <div className="header-account">
-          {session ? (
-            <>
-              <span className="avatar">{session.user.fullName.charAt(0)}</span>
-              <span className="account-name">{session.user.fullName}</span>
-              <button
-                className="icon-button"
-                onClick={signOut}
-                disabled={!!busy}
-                aria-label="Đăng xuất"
-              >
-                <LogOut size={18} />
-              </button>
-            </>
-          ) : (
-            <span className="small-label">Không gian học tập của bạn</span>
+    <div className={css("learning-app")}>
+      <div className={css("dashboard-shell")}>
+        <div className={css("account-bar")}>
+          <span>{session ? session.user.fullName : "Không gian Learning"}</span>
+          {session && (
+            <button
+              className={css("button outline")}
+              onClick={signOut}
+              disabled={!!busy}
+            >
+              <LogOut size={16} />
+              Đăng xuất
+            </button>
           )}
         </div>
-      </header>
+      </div>
 
-      <main className="dashboard-shell">
-        <div className="breadcrumb">
+      <div className={css("dashboard-shell")}>
+        <div className={css("breadcrumb")}>
           Không gian học tập <ChevronRight size={14} />
           <span>Learning demo</span>
         </div>
-        <section className="welcome-section">
+        <section className={css("welcome-section")}>
           <div>
-            <p className="eyebrow">MỖI NGÀY, MỘT BƯỚC TIẾN</p>
+            <p className={css("eyebrow")}>MỖI NGÀY, MỘT BƯỚC TIẾN</p>
             <h1>
               Học một chút.
               <br />
               Tiến xa hơn.
             </h1>
-            <p className="welcome-copy">
+            <p className={css("welcome-copy")}>
               Tiếp tục bài học, kiểm tra kiến thức và ghi nhận
-              <br className="desktop-break" /> từng cột mốc trên hành trình của
-              bạn.
+              <br className={css("desktop-break")} /> từng cột mốc trên hành
+              trình của bạn.
             </p>
-            <a href="#lessons" className="text-link">
+            <a href="#lessons" className={css("text-link")}>
               Vào lớp học <ArrowRight size={17} />
             </a>
           </div>
-          <div className="journey-card">
-            <div className="journey-top">
+          <div className={css("journey-card")}>
+            <div className={css("journey-top")}>
               <span>HÀNH TRÌNH CỦA BẠN</span>
               <GraduationCap size={25} />
             </div>
-            <div className="journey-content">
+            <div className={css("journey-content")}>
               <div
-                className="progress-ring"
+                className={css("progress-ring")}
                 style={{
                   background: `conic-gradient(#ffffff ${progress.progressPct * 3.6}deg, #ffffff26 0deg)`,
                 }}
@@ -329,19 +319,19 @@ export function LearningDashboard() {
                 </p>
               </div>
             </div>
-            <div className="journey-bottom">
+            <div className={css("journey-bottom")}>
               <span>
-                <span className="status-dot" /> Tiến độ được lưu tự động sau khi
-                cập nhật
+                <span className={css("status-dot")} /> Tiến độ được lưu tự động
+                sau khi cập nhật
               </span>
               <ArrowUpRight size={18} />
             </div>
           </div>
         </section>
 
-        <section className="overview" aria-label="Tổng quan học tập">
+        <section className={css("overview")} aria-label="Tổng quan học tập">
           <div>
-            <span className="stat-icon">
+            <span className={css("stat-icon")}>
               <BookOpen size={20} />
             </span>
             <span>
@@ -350,7 +340,7 @@ export function LearningDashboard() {
             </span>
           </div>
           <div>
-            <span className="stat-icon green">
+            <span className={css("stat-icon green")}>
               <CheckCircle2 size={20} />
             </span>
             <span>
@@ -359,7 +349,7 @@ export function LearningDashboard() {
             </span>
           </div>
           <div>
-            <span className="stat-icon orange">
+            <span className={css("stat-icon orange")}>
               <Award size={20} />
             </span>
             <span>
@@ -369,9 +359,11 @@ export function LearningDashboard() {
               <small>Chứng chỉ đạt được</small>
             </span>
           </div>
-          <div className="connection">
+          <div className={css("connection")}>
             <span
-              className={`status-dot ${health ? "online" : healthFailed ? "offline" : "pending"}`}
+              className={css(
+                `status-dot ${health ? "online" : healthFailed ? "offline" : "pending"}`,
+              )}
             />
             <span>
               <strong>
@@ -387,16 +379,19 @@ export function LearningDashboard() {
         </section>
 
         {!session && (
-          <section className="login-card" aria-labelledby="login-heading">
+          <section
+            className={css("login-card")}
+            aria-labelledby="login-heading"
+          >
             <div>
-              <span className="section-kicker">BẮT ĐẦU TẠI ĐÂY</span>
+              <span className={css("section-kicker")}>BẮT ĐẦU TẠI ĐÂY</span>
               <h2 id="login-heading">Vào lớp học demo</h2>
               <p>
                 Tài khoản mẫu đã được điền sẵn. Đăng nhập để lưu tiến độ và làm
                 bài.
               </p>
             </div>
-            <form onSubmit={signIn} className="login-form">
+            <form onSubmit={signIn} className={css("login-form")}>
               <label>
                 Email
                 <input
@@ -417,9 +412,9 @@ export function LearningDashboard() {
                   required
                 />
               </label>
-              <button className="button primary" disabled={!!busy}>
+              <button className={css("button primary")} disabled={!!busy}>
                 {busy === "login" ? (
-                  <LoaderCircle size={17} className="spin" />
+                  <LoaderCircle size={17} className={css("spin")} />
                 ) : (
                   <LogIn size={17} />
                 )}
@@ -429,29 +424,29 @@ export function LearningDashboard() {
           </section>
         )}
 
-        <div className="feedback-region" aria-live="polite">
+        <div className={css("feedback-region")} aria-live="polite">
           {error && (
-            <div className="feedback error" role="alert">
+            <div className={css("feedback error")} role="alert">
               {error}
             </div>
           )}
           {notice && !error && (
-            <div className="feedback success" role="status">
+            <div className={css("feedback success")} role="status">
               <CheckCircle2 size={17} />
               {notice}
             </div>
           )}
         </div>
 
-        <div className="learning-grid">
-          <section className="lesson-section" id="lessons">
-            <div className="section-heading">
+        <div className={css("learning-grid")}>
+          <section className={css("lesson-section")} id="lessons">
+            <div className={css("section-heading")}>
               <div>
-                <span className="section-kicker">KHÓA HỌC CỦA BẠN</span>
+                <span className={css("section-kicker")}>KHÓA HỌC CỦA BẠN</span>
                 <h2>{demoCourse.title}</h2>
               </div>
               <button
-                className="icon-button"
+                className={css("icon-button")}
                 title="Tải lại tiến độ"
                 aria-label="Tải lại tiến độ"
                 disabled={!session || !!busy}
@@ -470,7 +465,7 @@ export function LearningDashboard() {
                 />
               </button>
             </div>
-            <div className="course-progress">
+            <div className={css("course-progress")}>
               <div>
                 <span>Tiến độ khóa học</span>
                 <strong>{progress.progressPct}%</strong>
@@ -481,7 +476,7 @@ export function LearningDashboard() {
                 aria-label="Tiến độ khóa học"
               />
             </div>
-            <div className="lesson-list">
+            <div className={css("lesson-list")}>
               {demoCourse.lessons.map((lesson, index) => {
                 const saved = progress.lessons.find(
                   (item) => item.lessonId === lesson.id,
@@ -489,11 +484,13 @@ export function LearningDashboard() {
                 const watched = drafts[lesson.id] ?? saved?.watchedSec ?? 0;
                 return (
                   <article
-                    className={`lesson-card ${saved?.completed ? "is-complete" : ""}`}
+                    className={css(
+                      `lesson-card ${saved?.completed ? "is-complete" : ""}`,
+                    )}
                     key={lesson.id}
                   >
-                    <div className="lesson-title">
-                      <span className="lesson-number">
+                    <div className={css("lesson-title")}>
+                      <span className={css("lesson-number")}>
                         {saved?.completed ? (
                           <Check size={20} />
                         ) : (
@@ -505,12 +502,14 @@ export function LearningDashboard() {
                         <p>{lesson.description}</p>
                       </div>
                       <span
-                        className={`lesson-badge ${saved?.completed ? "complete" : ""}`}
+                        className={css(
+                          `lesson-badge ${saved?.completed ? "complete" : ""}`,
+                        )}
                       >
                         {saved?.completed ? "Hoàn thành" : "Chưa hoàn thành"}
                       </span>
                     </div>
-                    <div className="watch-control">
+                    <div className={css("watch-control")}>
                       <label htmlFor={`watch-${lesson.id}`}>
                         Mô phỏng thời gian xem{" "}
                         <span>
@@ -533,24 +532,24 @@ export function LearningDashboard() {
                           }))
                         }
                       />
-                      <div className="lesson-actions">
+                      <div className={css("lesson-actions")}>
                         <span>
                           <Clock3 size={14} />
                           Hoàn thành khi xem từ 90 giây
                         </span>
                         <div>
                           <button
-                            className="button subtle"
+                            className={css("button subtle")}
                             disabled={!session || !!busy}
                             onClick={() => saveProgress(lesson.id, watched)}
                           >
                             {busy === lesson.id ? (
-                              <LoaderCircle className="spin" size={15} />
+                              <LoaderCircle className={css("spin")} size={15} />
                             ) : null}
                             Lưu tiến độ
                           </button>
                           <button
-                            className="button outline"
+                            className={css("button outline")}
                             disabled={!session || !!busy || saved?.completed}
                             onClick={() =>
                               saveProgress(
@@ -569,24 +568,26 @@ export function LearningDashboard() {
                 );
               })}
             </div>
-            <p className="section-note">
+            <p className={css("section-note")}>
               <ShieldCheck size={15} />
               Tiến độ đã lưu không bị giảm khi bạn gửi lại thời gian thấp hơn.
             </p>
           </section>
 
-          <section className="quiz-section" id="quiz">
-            <div className="section-heading">
+          <section className={css("quiz-section")} id="quiz">
+            <div className={css("section-heading")}>
               <div>
-                <span className="section-kicker">KIỂM TRA KIẾN THỨC</span>
+                <span className={css("section-kicker")}>
+                  KIỂM TRA KIẾN THỨC
+                </span>
                 <h2>Một quiz nhỏ, hiểu hơn một chút.</h2>
               </div>
-              <span className="quiz-icon">
+              <span className={css("quiz-icon")}>
                 <GraduationCap size={24} />
               </span>
             </div>
-            <div className="quiz-meta">
-              <span>{quiz?.questions.length ?? 2} câu hỏi</span>
+            <div className={css("quiz-meta")}>
+              <span>{quiz?.questions.length ?? 0} câu hỏi</span>
               <span>
                 {quiz
                   ? quiz.timeLimitSec
@@ -598,7 +599,7 @@ export function LearningDashboard() {
             </div>
             {result && (
               <div
-                className={`quiz-result ${result.passed ? "passed" : ""}`}
+                className={css(`quiz-result ${result.passed ? "passed" : ""}`)}
                 role="status"
               >
                 <Award size={28} />
@@ -615,10 +616,12 @@ export function LearningDashboard() {
                 </div>
               </div>
             )}
-            {attempt ? (
-              <form onSubmit={submitQuiz} className="quiz-form">
+            {session && !quiz ? (
+              <p className={css("section-note")}>Bài học này chưa có quiz.</p>
+            ) : attempt ? (
+              <form onSubmit={submitQuiz} className={css("quiz-form")}>
                 <div
-                  className={`quiz-timer ${expired ? "expired" : ""}`}
+                  className={css(`quiz-timer ${expired ? "expired" : ""}`)}
                   role="timer"
                   aria-label="Thời gian còn lại"
                 >
@@ -639,7 +642,9 @@ export function LearningDashboard() {
                     </legend>
                     {question.options.map((option) => (
                       <label
-                        className={`quiz-option ${answers[question.id] === option.id ? "selected" : ""}`}
+                        className={css(
+                          `quiz-option ${answers[question.id] === option.id ? "selected" : ""}`,
+                        )}
                         key={option.id}
                       >
                         <input
@@ -662,10 +667,12 @@ export function LearningDashboard() {
                 ))}
                 {expired ? (
                   <>
-                    <p className="expired-note">Lượt làm bài đã hết giờ.</p>
+                    <p className={css("expired-note")}>
+                      Lượt làm bài đã hết giờ.
+                    </p>
                     <button
                       type="button"
-                      className="button primary full-width"
+                      className={css("button primary full-width")}
                       onClick={startQuiz}
                       disabled={!!busy}
                     >
@@ -675,11 +682,11 @@ export function LearningDashboard() {
                   </>
                 ) : (
                   <button
-                    className="button primary full-width"
+                    className={css("button primary full-width")}
                     disabled={!!busy}
                   >
                     {busy === "submit" ? (
-                      <LoaderCircle className="spin" size={17} />
+                      <LoaderCircle className={css("spin")} size={17} />
                     ) : (
                       <CheckCircle2 size={17} />
                     )}
@@ -688,8 +695,8 @@ export function LearningDashboard() {
                 )}
               </form>
             ) : (
-              <div className="quiz-ready">
-                <div className="quiz-illustration">
+              <div className={css("quiz-ready")}>
+                <div className={css("quiz-illustration")}>
                   <BookOpen size={38} />
                   <span>
                     <Check size={18} />
@@ -706,12 +713,12 @@ export function LearningDashboard() {
                   Kết quả được chấm ngay sau khi nộp.
                 </p>
                 <button
-                  className="button primary full-width"
+                  className={css("button primary full-width")}
                   onClick={startQuiz}
-                  disabled={!session || !!busy}
+                  disabled={!session || !quiz || !!busy}
                 >
                   {busy === "start" ? (
-                    <LoaderCircle size={17} className="spin" />
+                    <LoaderCircle size={17} className={css("spin")} />
                   ) : (
                     <Play size={16} />
                   )}
@@ -720,19 +727,19 @@ export function LearningDashboard() {
                 </button>
               </div>
             )}
-            <p className="quiz-footnote">
+            <p className={css("quiz-footnote")}>
               <ShieldCheck size={14} />
               Chấm trên server · Tối đa 3 lượt làm bài
             </p>
           </section>
         </div>
 
-        <section id="certificates" className="certificate-section">
-          <div className="certificate-symbol">
+        <section id="certificates" className={css("certificate-section")}>
+          <div className={css("certificate-symbol")}>
             <Award size={34} />
           </div>
-          <div className="certificate-copy">
-            <span className="section-kicker">THÀNH QUẢ CỦA BẠN</span>
+          <div className={css("certificate-copy")}>
+            <span className={css("section-kicker")}>THÀNH QUẢ CỦA BẠN</span>
             <h2>
               {courseCertificates.length
                 ? "Một cột mốc đáng nhớ."
@@ -745,7 +752,7 @@ export function LearningDashboard() {
             </p>
             {courseCertificates.map((certificate) => (
               <a
-                className="button certificate-link"
+                className={css("button certificate-link")}
                 key={certificate.serialNo}
                 href={`/api/certificates/${encodeURIComponent(certificate.serialNo)}/verify`}
                 target="_blank"
@@ -755,7 +762,7 @@ export function LearningDashboard() {
               </a>
             ))}
           </div>
-          <div className="certificate-status">
+          <div className={css("certificate-status")}>
             {courseCertificates.length ? (
               <>
                 <CheckCircle2 size={22} />
@@ -778,17 +785,18 @@ export function LearningDashboard() {
           </div>
         </section>
 
-        <footer className="site-footer">
+        <footer className={css("site-footer")}>
           <span>
             <BookOpen size={16} /> E-learning LMS{" "}
-            <span className="footer-separator">/</span> Không gian Learning
+            <span className={css("footer-separator")}>/</span> Không gian
+            Learning
           </span>
           <p>
             Bản demo local · Course/Lesson dùng dữ liệu mẫu · Progress, Quiz và
             Certificate dùng API NestJS thật.
           </p>
         </footer>
-      </main>
+      </div>
     </div>
   );
 }

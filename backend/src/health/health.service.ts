@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
-import { PublishedLessonCache } from '../learning/published-lesson-cache.service.js';
+import { RedisHealthProbe } from './redis-health-probe.service.js';
 import { LearningInfrastructureDto } from '../learning/dto/learning-infrastructure.dto.js';
 
 @Injectable()
@@ -14,7 +14,7 @@ export class HealthService {
   constructor(
     @Inject(DataSource) private readonly source: DataSource,
     @Inject(ConfigService) config: ConfigService,
-    @Inject(PublishedLessonCache) private readonly redis: PublishedLessonCache,
+    @Inject(RedisHealthProbe) private readonly redis: RedisHealthProbe,
   ) {
     this.config = LearningInfrastructureDto.from(config);
   }

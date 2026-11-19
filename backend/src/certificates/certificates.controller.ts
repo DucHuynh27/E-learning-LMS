@@ -48,7 +48,7 @@ export class CertificatesController {
     response
       .type('html')
       .send(
-        `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Xác thực chứng chỉ LMS</title><style>body{font:16px system-ui,sans-serif;max-width:46rem;margin:4rem auto;padding:0 1rem;line-height:1.7}dt{font-weight:600}dd{margin:0 0 1rem;overflow-wrap:anywhere}</style></head><body><h1>Chứng chỉ hợp lệ</h1><dl><dt>Số chứng chỉ</dt><dd>${escapeHtml(certificate.serialNo)}</dd><dt>Mã khóa học</dt><dd>${escapeHtml(certificate.courseId)}</dd><dt>Mã học viên</dt><dd>${escapeHtml(certificate.userId)}</dd><dt>Ngày cấp</dt><dd>${escapeHtml(certificate.issuedAt.toISOString())}</dd></dl></body></html>`,
+        `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Xác thực chứng chỉ LMS</title><style>body{font:16px system-ui,sans-serif;max-width:46rem;margin:4rem auto;padding:0 1rem;line-height:1.7}dt{font-weight:600}dd{margin:0 0 1rem;overflow-wrap:anywhere}</style></head><body><h1>Chứng chỉ hợp lệ</h1><dl><dt>Số chứng chỉ</dt><dd>${escapeHtml(certificate.serialNo)}</dd><dt>Mã khóa học</dt><dd>${escapeHtml(certificate.courseId)}</dd><dt>Ngày cấp</dt><dd>${escapeHtml(certificate.issuedAt.toISOString())}</dd></dl></body></html>`,
       );
   }
 }

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { ConfigService } from '@nestjs/config';
 import type { DataSource } from 'typeorm';
-import type { PublishedLessonCache } from '../learning/published-lesson-cache.service.js';
+import type { RedisHealthProbe } from './redis-health-probe.service.js';
 import { HealthService } from './health.service.js';
 
 describe('Health probes', () => {
@@ -11,7 +11,7 @@ describe('Health probes', () => {
   const service = new HealthService(
     { query } as unknown as DataSource,
     new ConfigService(),
-    { ping } as unknown as PublishedLessonCache,
+    { ping } as unknown as RedisHealthProbe,
   );
   beforeEach(() => {
     query.mockResolvedValue([{ ok: 1 }]);
