@@ -1,12 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
 import { createObserveModule } from '@nestjs/observe';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { throttlerRootOptions } from './common/throttling.js';
 import { AppDataSource } from './database/data-source.js';
 import { validateEnv } from './config/env.validation.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -29,16 +26,11 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       // App runtime không cần migrations — chỉ CLI chạy chúng.
       useFactory: () => ({ ...AppDataSource.options, migrations: [] }),
     }),
-    ThrottlerModule.forRoot(throttlerRootOptions()),
     UserModule,
     AuthModule,
     LearningModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    // Rate limit toàn cục; từng route siết chặt thêm bằng @Throttle (vd login).
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-  ],
+  providers: [AppService],
 })
 export class AppModule {}

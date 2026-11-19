@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { throttlerRootOptions } from '../common/throttling.js';
 import { UserModule } from '../user/user.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
@@ -10,7 +12,12 @@ import { RolesGuard } from './guards/roles.guard.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 
 @Module({
-  imports: [UserModule, PassportModule, JwtModule.register({})],
+  imports: [
+    UserModule,
+    PassportModule,
+    JwtModule.register({}),
+    ThrottlerModule.forRoot(throttlerRootOptions()),
+  ],
   controllers: [AuthController],
   providers: [
     AuthService,
@@ -18,6 +25,9 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
     // Mặc định mọi route đều yêu cầu đăng nhập; route công khai đánh dấu @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Throttler đặt SAU auth guard (thứ tự provider được tôn trọng) để tracker đọc
+    // được req.user → đếm rate limit theo tài khoản thay vì chỉ theo IP.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AuthModule {}

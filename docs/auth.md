@@ -11,7 +11,7 @@ Request
   → JwtAuthGuard (toàn cục) ── nếu @Public() → bỏ qua
         └─ JwtStrategy: verify access token → request.user = { userId, email, role }
   → RolesGuard ── đọc @Roles() metadata, so role
-  → ThrottlerGuard ── đếm request theo IP; vượt ngưỡng → 429
+  → ThrottlerGuard ── đếm theo tài khoản (req.user) nếu đã xác thực, ngược lại theo IP; vượt ngưỡng → 429
   → Controller → Service → UsersRepository → DB
   → ClassSerializerInterceptor → TransformInterceptor (bọc { data })
   (lỗi ở bất kỳ đâu → AllExceptionsFilter)
@@ -26,7 +26,7 @@ Request
 | `src/common/interceptors/transform.interceptor.ts` | Bọc mọi response thành `{ data }` |
 | `src/common/filters/all-exceptions.filter.ts` | Shape lỗi thống nhất, log 5xx |
 | `src/database/data-source.ts` | Cấu hình TypeORM dùng chung cho runtime + CLI |
-| `src/auth/auth.module.ts` | `JwtModule`, đăng ký 2 guard toàn cục |
+| `src/auth/auth.module.ts` | `JwtModule` + `ThrottlerModule`; đăng ký 3 guard toàn cục theo thứ tự Auth → Roles → Throttler |
 | `src/auth/auth.service.ts` | register / login / refresh, cấp token |
 | `src/auth/auth.controller.ts` | `POST register/login/refresh`, `GET me` |
 | `src/auth/strategies/jwt.strategy.ts` | Verify access token → `AuthenticatedUser` |
@@ -53,7 +53,7 @@ Request
 - **`trust proxy` cấu hình được qua `TRUST_PROXY`, mặc định tắt:** chỉ tin `X-Forwarded-For` khi request đến từ proxy thật (số hop, `loopback`, hoặc danh sách IP/CIDR). `EnvVars` **cấm** giá trị `true` trần vì nó cho phép client tự giả IP để né rate limit.
 - **`errorMessage` tùy biến thay vì override guard:** `ThrottlerException` mặc định trả chuỗi `"ThrottlerException: Too Many Requests"`. Đặt `errorMessage: 'Too many requests'` giữ response lỗi sạch, và `AllExceptionsFilter` bọc lại thành cùng shape với mọi lỗi khác.
 - **Ẩn field nhạy cảm bằng hai lớp:** `passwordHash` vừa `select: false` (không kéo hash khỏi DB) vừa `@Exclude()` (nếu entity lỡ lọt ra ngoài ranh giới DTO thì `ClassSerializerInterceptor` vẫn cắt). DTO ở biên (`toPublicUser`) vẫn là lớp chính.
-- **Thứ tự guard toàn cục:** `ThrottlerGuard` (đăng ký ở `AppModule`) chạy **trước** `JwtAuthGuard`/`RolesGuard` (ở `AuthModule`) — guard của module cha chạy trước module nhập. Nhờ vậy request bị 401 vẫn được đếm, không né được rate limit. Có test hồi quy khoá hành vi này.
+- **Thứ tự guard toàn cục — throttler đặt SAU auth:** trong `AuthModule`, thứ tự provider là `JwtAuthGuard` → `RolesGuard` → `ThrottlerGuard`. Nhờ chạy sau khi `req.user` đã có, tracker mặc định (`accountOrIpTracker`) đếm **theo tài khoản** thay vì chỉ theo IP → nhiều học viên chung IP (NAT/proxy) vẫn có bucket riêng, và request bị 401 không tiêu bucket. Login (route công khai) vẫn đếm theo email. Có test hồi quy khoá hành vi này.
 
 ## 5. Cơ sở dữ liệu liên quan
 | Entity | Trường quan trọng | Index / Unique | Lý do |
@@ -73,7 +73,7 @@ Request
 `CreateUserDto`: `email` (IsEmail) · `password` (8..72) · `fullName` (1..255).
 `user` trả về: `{ id, email, fullName, role }` — **không** có `passwordHash`.
 
-Rate limit (vượt → 429): `login` **5 req/60s theo tài khoản (email)**, `register` **10 req/60s**, `refresh` **20 req/60s**, các route còn lại theo ngưỡng toàn cục **100 req/60s theo IP**.
+Rate limit (vượt → 429): `login` **5 req/60s theo email**, `register` **10**, `refresh` **20**; quiz start attempt **10**, submit attempt **5** (theo tài khoản). Route đã xác thực đếm **theo tài khoản**, route công khai theo IP; mặc định toàn cục **100 req/60s**.
 
 ## 7. Xử lý lỗi & edge case
 - **400** — DTO sai/thiếu (ValidationPipe `whitelist` + `forbidNonWhitelisted`).
@@ -85,7 +85,7 @@ Rate limit (vượt → 429): `login` **5 req/60s theo tài khoản (email)**, `
 
 ## 8. Test
 - **Unit:** `app.controller.spec.ts` (AppController/AppService) · `auth.service.spec.ts` (register/login/refresh + không lộ `passwordHash`) · `user.entity.spec.ts` (serialize cắt `passwordHash`) · `bootstrap.spec.ts` (CORS theo config, `resolveCorsOrigins`, `parseTrustProxy`).
-- **Integration:** `auth-throttle.integration.spec.ts` (login/register/refresh trả 429 sau ngưỡng; email khác không bị khoá lây) · `common/trust-proxy.integration.spec.ts` (`trust proxy` bật thì đếm riêng theo client, tắt thì bỏ qua `X-Forwarded-For`) · `common/throttler-order.integration.spec.ts` (throttler chạy trước guard 401).
+- **Integration:** `auth-throttle.integration.spec.ts` (login/register/refresh trả 429 sau ngưỡng; email khác không bị khoá lây) · `attempts-throttle.integration.spec.ts` (quiz start/submit 429 theo từng tài khoản) · `common/trust-proxy.integration.spec.ts` (`trust proxy` bật thì đếm riêng theo client, tắt thì bỏ qua `X-Forwarded-For`) · `common/throttler-order.integration.spec.ts` (throttler chạy sau auth; request 401 không tiêu bucket; đếm riêng theo tài khoản).
 - **e2e:** smoke `GET /v1` → `{ data: 'Hello World!' }` (dùng `configureApp`).
 - **Smoke thủ công:** register 201 (không lộ hash) · login OK · `/me` có token 200 / không token 401 · validation 400.
 - **Còn nợ:** e2e riêng cho auth (register/login/refresh/me) — do `@qa` viết.
@@ -98,8 +98,8 @@ Rate limit (vượt → 429): `login` **5 req/60s theo tài khoản (email)**, `
 ## 10. Hạn chế / chưa làm
 - **Chưa có refresh token rotation / lưu refresh token** (nằm trong danh sách **CẮT** của `TASKLIST.md`) → chưa thu hồi được token.
 - **Rate limit dùng storage in-memory** — đủ cho demo một instance; nhiều instance cần storage chia sẻ (Redis) mới đếm đúng trên toàn cụm.
-- **`trust proxy` mặc định tắt** — khi chạy sau proxy mà chưa cấu hình `TRUST_PROXY`, backend vẫn thấy IP của proxy nên các route dùng IP (ngưỡng toàn cục) đếm chung một bucket. Login đã đếm theo tài khoản nên không bị ảnh hưởng; các route khác cần đặt `TRUST_PROXY` đúng.
-- **Rate limit cho route quiz** — đã gắn `@Throttle` (10 req/60s) cho start/submit attempt tại `@learning` (`attempts.controller.ts`); là thay đổi cross-module do `@lead` thực hiện và cần `@learning` review.
+- **`trust proxy` mặc định tắt** — khi chạy sau proxy mà chưa cấu hình `TRUST_PROXY`: các route đã xác thực vẫn đếm theo tài khoản nên không bị ảnh hưởng; chỉ các route **công khai/ẩn danh** (đếm theo IP) mới có thể dồn chung bucket. Nên đặt `TRUST_PROXY` đúng trong môi trường thật.
+- **Rate limit cho route quiz** — đã gắn `@Throttle` cho start (10 req/60s) và submit (5 req/60s), đếm theo tài khoản, tại `@learning` (`attempts.controller.ts`); là thay đổi cross-module do `@lead` thực hiện và cần `@learning` review (đã chỉnh `learning.http.integration.spec.ts` để tắt throttle khi test nghiệp vụ).
 - **Swagger hoãn.**
 - **Chưa có test DB riêng cho e2e** (`@qa`).
 - `JWT_ACCESS_TTL`/`JWT_REFRESH_TTL` để mặc định trong code nếu env thiếu.

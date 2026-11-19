@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { getStorageToken } from '@nestjs/throttler';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -99,6 +100,18 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       })
         .overrideProvider(HealthService)
         .useValue({ check: health })
+        // Test này kiểm chứng nghiệp vụ, không phải rate limit. ThrottlerGuard được kéo
+        // vào qua AuthModule; thay storage bằng bản không bao giờ block để các vòng lặp
+        // submit không chạm ngưỡng quiz (không đụng code production).
+        .overrideProvider(getStorageToken())
+        .useValue({
+          increment: async () => ({
+            totalHits: 1,
+            timeToExpire: 60,
+            isBlocked: false,
+            timeToBlockExpire: 0,
+          }),
+        })
         .compile();
       app = module.createNestApplication();
       configureApp(app);
