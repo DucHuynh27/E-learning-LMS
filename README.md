@@ -25,7 +25,7 @@ Modular Monolith — mỗi domain là một module độc lập, **mỗi module 
 | `TypeOrmModule`, `ConfigModule` (EnvVars), `AuthModule`, `UsersModule`, cross-cutting (pipes/filters/interceptors), Swagger | **Huỳnh Kim Đức — Lead** (`@lead`, kiêm PM/PO/BA) · [Hướng dẫn](prompt/lead/AGENTS.md) | Nền tảng | DataSource + migration nền tảng, JWT/RBAC, chuẩn hóa tầng I/O, review thay đổi cross-cutting |
 | `CoursesModule`, `SectionsModule`, `LessonsModule`, `EnrolmentsModule` | **Dev Content** (`@content`) · [Hướng dẫn](prompt/dev-content/AGENTS.md) | Content | CRUD khóa học/section/lesson, publish, enrolment, phân quyền Instructor/Student |
 | `UploadsModule`, `MediaModule`, cấu hình `BullModule`, `S3Module`, worker thumbnail | **Dev Media** (`@media`) · [Hướng dẫn](prompt/dev-media/AGENTS.md) | Infra / Media | Upload/playback qua presigned URL MinIO, metadata video, một job BullMQ sinh thumbnail |
-| `ProgressModule`, `CertificatesModule`, `QuizzesModule`, `AttemptsModule`, `HealthModule` | **Dev Learning** (`@learning`) · [Hướng dẫn](prompt/dev-learning/AGENTS.md) | Learning | Tiến độ học tập, chứng chỉ dạng record + tra cứu, quiz chấm server-side và giới hạn lượt/thời gian, health check |
+| `ProgressModule`, `CertificatesModule`, `QuizzesModule`, `AttemptsModule`, `HealthModule` | **Phạm Ngọc Minh Quân** (`@learning`) · [Hướng dẫn](prompt/dev-learning/AGENTS.md) | Learning | Tiến độ học tập, chứng chỉ dạng record + tra cứu, quiz chấm server-side và giới hạn lượt/thời gian, health check |
 | `QnaModule`, `NotificationsModule`, `WsGateway` + **toàn bộ e2e test** | **QA Realtime** (`@qa`) · [Hướng dẫn](prompt/qa-realtime/AGENTS.md) | Realtime + QA | Q&A real-time tối thiểu, room theo course, DB test riêng và e2e xuyên module |
 
 Các owner chưa có tên thành viên dùng handle thống nhất với [`TASKLIST.md`](TASKLIST.md); điền tên thật khi nhóm chốt nhân sự. Mỗi owner phụ trách cả migration, unit/integration test và tài liệu của module mình; QA phụ trách e2e. Lead duyệt thay đổi cross-cutting.
@@ -44,8 +44,8 @@ Phạm vi theo [`TASKLIST.md`](TASKLIST.md): không triển khai HLS đa bitrate
 | 0. Foundation                   | TypeORM + Config + Auth + RBAC + Health + CI | Lead + cả nhóm |
 | 1. Catalog & Content            | Course/Section/Lesson + Enrolment            | `@content`     |
 | 2. Media Pipeline               | Upload MinIO → BullMQ → thumbnail            | `@media`       |
-| 3. Progress & Certificate       | % hoàn thành + chứng chỉ record và tra cứu  | `@learning`    |
-| 4. Quiz                         | Thi, chấm điểm, giới hạn lượt/thời gian      | `@learning`    |
+| 3. Progress & Certificate       | % hoàn thành + chứng chỉ record và tra cứu  | Phạm Ngọc Minh Quân (@learning) |
+| 4. Quiz                         | Thi, chấm điểm, giới hạn lượt/thời gian      | Phạm Ngọc Minh Quân (@learning) |
 | 5. Realtime Q&A & Notifications | Socket.io, room theo course                  | `@qa`          |
 | 6. Hardening                    | Rate limit, caching, observability, e2e      | Cả nhóm        |
 
@@ -78,7 +78,7 @@ Theo mục [Setup](#setup) bên dưới: clone → `pnpm install` → `cp .env.e
 | `feat/auth` | @lead |
 | `feat/content` | @content |
 | `feat/media` | @media |
-| `feat/learning` | @learning |
+| `feat/learning` | Phạm Ngọc Minh Quân (@learning) |
 | `feat/realtime` | @qa |
 
 ```bash
