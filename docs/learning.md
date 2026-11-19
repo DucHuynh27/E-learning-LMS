@@ -42,7 +42,7 @@ REDIS_HOST và MINIO_HOST phải có trong môi trường boot; mẫu local dùn
 | Learning HTTP module integration | 10 | Auth/Learning thật, PostgreSQL; Catalog fixtures, health stub |
 | Regression GET chỉ đọc/không đợi writer lock | 2 | PostgreSQL 16 thật |
 | Tổng npm test backend | 68 | Không có describe.runIf hoặc test bị skip |
-| Frontend unit | 9 | Quiz 404, lỗi 401/403/500 và vòng đời sessionStorage |
+| Frontend unit | 17 | Quiz 404, lỗi 401/403/500; storage bị chặn/hết dung lượng, dữ liệu lưu hỏng và deadline server |
 | E2E nền tảng (riêng) | 1 | Chỉ GET /v1; không phải nghiệm thu Learning |
 
 68 = 34 unit + 22 service + 10 HTTP + 2 regression. Các số 62/32 trước đây mô tả phiên bản cũ hoặc tập con; không dùng làm tổng của bản hiện tại.
@@ -59,6 +59,6 @@ Catalog thật/FK/cascade vẫn chờ Content và Lead. Adapter hiện dựa và
 
 PR #10 đã merge bằng admin bypass theo ghi nhận của Lead; merge không phải bằng chứng có approval hoặc QA ký. Các checkbox implementation mô tả code/test cục bộ; trạng thái tích hợp, review cross-cutting và QA tiếp tục để mở.
 
-Frontend /learning dùng CSS Module local, load quiz 404 không chặn progress/certificates. Đăng xuất xoá attempt của user khỏi sessionStorage; khôi phục sau reload loại bỏ attempt hết hạn. Layout/root carousel được trả về scaffold trước Learning; owner scaffold là Lead, thay đổi tương lai cần review riêng.
+Frontend /learning dùng CSS Module local, load quiz 404 không chặn progress/certificates. Đăng xuất xoá attempt của user khỏi sessionStorage; khôi phục sau reload loại bỏ attempt hết hạn hoặc sai cấu trúc câu hỏi/đáp án. Lỗi truy cập storage không làm bắt đầu/nộp bài/đăng xuất thất bại; nếu không lưu được thì lượt chỉ còn trong bộ nhớ trang hiện tại. Layout/root carousel được trả về scaffold trước Learning; owner scaffold là Lead, thay đổi tương lai cần review riêng.
 
 PDF/email chứng chỉ, reset lượt, random đề và anti-cheat nâng cao nằm ngoài scope hiện tại. Demo dùng fixtures Catalog và API Learning thật; xem frontend/README.md.

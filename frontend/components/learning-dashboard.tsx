@@ -36,6 +36,7 @@ import {
   loadLearningSnapshot,
   restoreAttempt,
   forgetAttempt,
+  rememberAttempt,
   type ActiveAttempt,
 } from "@/lib/learning-state";
 import styles from "./learning-dashboard.module.css";
@@ -134,7 +135,7 @@ export function LearningDashboard() {
         caught.status === 409 &&
         caught.message.includes("already been submitted")
       ) {
-        forgetAttempt(sessionStorage, session.user.id);
+        forgetAttempt(session.user.id);
         setAttempt(null);
       }
       setError(messageFor(caught));
@@ -152,14 +153,14 @@ export function LearningDashboard() {
       });
       setSession(data);
       await loadSnapshot(data.accessToken);
-      setAttempt(restoreAttempt(sessionStorage, data.user.id));
+      setAttempt(restoreAttempt(data.user.id));
       setNow(Date.now());
       setNotice(`Chào ${data.user.fullName}, lớp học đã sẵn sàng.`);
     });
   }
 
   function signOut() {
-    if (session) forgetAttempt(sessionStorage, session.user.id);
+    if (session) forgetAttempt(session.user.id);
     setSession(null);
     setProgress(emptyProgress);
     setCertificates([]);
@@ -206,10 +207,7 @@ export function LearningDashboard() {
       setAnswers({});
       setResult(null);
       setNow(Date.now());
-      sessionStorage.setItem(
-        `lms-attempt:${session.user.id}`,
-        JSON.stringify(active),
-      );
+      rememberAttempt(session.user.id, started);
     });
   }
 
@@ -232,7 +230,7 @@ export function LearningDashboard() {
       );
       setResult(submitted);
       setAttempt(null);
-      sessionStorage.removeItem(`lms-attempt:${session.user.id}`);
+      forgetAttempt(session.user.id);
       setNotice("Bài làm đã được chấm trên server.");
     });
   }

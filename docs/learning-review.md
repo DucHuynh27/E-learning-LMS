@@ -10,7 +10,7 @@
 | #16 | Bỏ cache tổng published và API invalidate không có caller | Tổng PostgreSQL theo course; test publish thêm bài; không còn phụ thuộc TTL |
 | #17 | Tách CertificateResponse cá nhân và PublicCertificateResponse | HTTP kiểm tra shape JSON và không có userId trong HTML |
 | #19 | Message dùng MAX_QUIZ_ATTEMPTS | Service integration xác nhận message khi hết lượt |
-| #20 | signOut xoá đúng key; không khôi phục attempt hết hạn | Frontend storage tests |
+| #20 | signOut xoá đúng key; bỏ attempt hết hạn/sai cấu trúc; storage bị chặn/hết dung lượng không biến thao tác server thành lỗi | Frontend storage tests, gồm getter SecurityError và method failures |
 | #21 | Mẫu/fallback LMS_API_URL dùng port demo 3002 | .env.example, next.config.ts và README thống nhất |
 | #22 | Xoá wiring patch, sửa các tham chiếu | Wiring được mô tả trực tiếp trong docs tích hợp |
 | #23 | Helper chuyển sang backend/test-support | nest build không có helper trong dist |

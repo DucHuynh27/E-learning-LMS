@@ -80,6 +80,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Kiểm thử HTTP module Learning: JWT/role, DTO, envelope/lỗi, chấm điểm, deadline/lượt thi và chứng chỉ public với PostgreSQL + fixtures Catalog — `@learning`
 - [x] Sửa lỗi snapshot khi đọc/sửa quiz đồng thời, deadline tổng Redis và cache cũ làm tụt trạng thái khoá đã hoàn thành; có test hồi quy — `@learning`
 - [x] Đồng bộ frontend scaffold từ `main`, tách dashboard `/learning` và dùng deadline quiz do PostgreSQL cấp, kiểm tra HTTP/integration cho deadline và lượt không giới hạn — `@learning`
+- [x] Frontend Learning chịu được sessionStorage bị chặn/hết dung lượng và loại dữ liệu lượt thi sai cấu trúc; 17 test frontend — `@learning`
 - [ ] S3Module (MinIO `forcePathStyle`) + UploadsModule — `@media`
 - [ ] MediaModule: lưu metadata + serve presigned GET — `@media`
 - [ ] BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`
@@ -90,7 +91,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Chuẩn bị contract DB, các quyết định FK/cascade cần chốt và ma trận bàn giao QA tại [`docs/learning-integration.md`](docs/learning-integration.md) — `@learning`
 - [ ] Hỗ trợ + review + gỡ chặn — `@lead`
 
-> Kiểm tra local **2026-11-19**: **68 test backend = 34 unit + 22 service integration + 10 HTTP integration + 2 regression GET**, thêm **9 test frontend** và **1 e2e nền tảng** riêng. Các test DB dùng PostgreSQL 16 thật và Catalog fixtures. Xem docs/learning.md và docs/learning-review.md. Checkbox implementation không đồng nghĩa nghiệm thu tích hợp; Catalog thật/FK/cascade, Lead review và QA vẫn mở.
+> Kiểm tra local **2026-11-19**: **68 test backend = 34 unit + 22 service integration + 10 HTTP integration + 2 regression GET**, thêm **17 test frontend** và **1 e2e nền tảng** riêng. Các test DB dùng PostgreSQL 16 thật và Catalog fixtures. Xem docs/learning.md và docs/learning-review.md. Checkbox implementation không đồng nghĩa nghiệm thu tích hợp; Catalog thật/FK/cascade, Lead review và QA vẫn mở.
 >
 > PR #10 đã merge bằng admin bypass theo ghi nhận Lead, không phải approval hoặc QA ký. Các issue của Lead #11/#12/#18/#27 tiếp tục chờ owner xác nhận; cấu hình CI/config được chuẩn bị riêng để review.
 >

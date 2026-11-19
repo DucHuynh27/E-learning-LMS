@@ -35,6 +35,8 @@ Course/Lesson/Enrolment là fixtures theo contract Catalog, không phải implem
 
 Mỗi quiz tối đa 3 lượt; các lượt hết giờ vẫn tính vào giới hạn. Frontend giữ token trong bộ nhớ, cần đăng nhập lại sau khi tải lại trang. Lượt quiz đang mở được lưu theo user trong `sessionStorage` để tiếp tục sau khi tải lại trang và đăng nhập lại. Đăng xuất chủ động xoá key attempt của user; attempt hết hạn/không hợp lệ cũng bị loại khi khôi phục.
 
+Nếu trình duyệt chặn storage hoặc hết dung lượng, bắt đầu/nộp quiz và đăng xuất vẫn hoạt động trong phiên hiện tại. Khi đó không bảo đảm khôi phục lượt sau khi tải lại trang. Dữ liệu lưu được kiểm tra cả cấu trúc câu hỏi/đáp án và thời gian trước khi khôi phục; deadline luôn tính từ `expiresAt` của server.
+
 Đồng hồ quiz dùng `expiresAt` do backend trả khi bắt đầu lượt; không cộng lại thời gian từ lúc nhận response. `expiresAt: null` là lượt không giới hạn. Backend vẫn kiểm tra deadline độc lập khi nộp bài.
 
 ## Kết nối backend thông thường
