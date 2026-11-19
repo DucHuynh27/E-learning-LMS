@@ -49,7 +49,9 @@ REDIS_HOST và MINIO_HOST phải có trong môi trường boot; mẫu local dùn
 
 Trong backend: npm test chạy toàn bộ và cần PostgreSQL, lỗi kết nối làm test thất bại. npm run test:unit là lựa chọn explicit không cần DB. Integration tự tạo/dọn schema ngẫu nhiên, không dùng dữ liệu demo/public. Bản kiểm tra local dùng PostgreSQL riêng ở port 55433; không đổi mật khẩu DB đang có.
 
-CI đề xuất: lint-and-test có PostgreSQL service và chạy build + toàn bộ npm test; frontend có lint/test/typecheck/build; e2e giữ kiểm tra nền tảng riêng. Đây là cấu hình chờ Lead review, kết quả local không thay cho kết quả GitHub Actions hoặc required checks.
+Đã xác minh [GitHub Actions run #31 của PR #29](https://github.com/DucHuynh27/E-learning-LMS/actions/runs/44504032170) trên head `16c3636` (merge ref `3f4abd0`): cả ba job thành công. Log `lint-and-test` xác nhận 68 test qua, không skip, cùng lint/build; `frontend` xác nhận 9 test, lint/typecheck/build qua; `e2e` xác nhận 1 test nền tảng qua. PostgreSQL service được khởi tạo trong job backend, dependencies được cài bằng frozen lockfile.
+
+Kết quả CI này xác nhận việc thực thi các gate trong nhánh PR. Lead review, required status checks của main và nghiệm thu QA/Catalog thật tiếp tục để mở; một run xanh không thay thế các bước đó.
 
 ## Tích hợp và nghiệm thu còn mở
 

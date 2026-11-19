@@ -45,7 +45,8 @@ Progress cập nhật đúng %, chứng chỉ tự phát khi đạt 100%, quiz c
 - [x] Công thức `progressPct`: đếm lesson published, làm tròn phần trăm; chứng chỉ yêu cầu hoàn thành đủ mọi bài, không chỉ phần trăm đã làm tròn.
 - [x] Chính sách quiz: tối đa 3 lượt bắt đầu, tính cả hết giờ; chấm server-side, kiểm tra deadline và chống nộp trùng.
 - [x] Implementation Progress/Certificate/Quiz/Attempt/Health, wiring, migration và bản demo local.
-- [x] Test HTTP module với Auth/JWT/role/DTO thật và test hồi quy snapshot quiz, timeout Redis, cache cũ; vẫn dùng fixtures Catalog riêng.
+- [x] Test HTTP module với Auth/JWT/role/DTO thật, snapshot quiz, Redis health lifecycle và GET progress read-only; vẫn dùng fixtures Catalog riêng.
+- [x] Xác minh CI run #31 của PR #29: 68 test backend, 9 test frontend và 1 e2e nền tảng qua trên GitHub Actions; xem docs/learning.md để lấy link log và commit đã kiểm tra.
 - [ ] Lead review/xác nhận CI và required checks cho backend/frontend (#11/#12). Implementation và số test hiện tại xem docs/learning.md.
 - [ ] Tích hợp với Course/Lesson/Enrolment thật và FK/cascade — phối hợp `@content` + Lead; nhánh Content hiện chưa có implementation.
 - [ ] Lead review thay đổi cross-cutting và QA nghiệm thu e2e toàn hệ thống.

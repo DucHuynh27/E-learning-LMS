@@ -85,13 +85,16 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [ ] BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`
 - [ ] e2e cho progress + quiz — `@qa`
 - [ ] Tích hợp Learning với schema/module Catalog thật và chốt FK/cascade tới Course/Lesson — `@learning` + `@content` + `@lead`
-- [ ] Lead xác nhận CI đầy đủ (PostgreSQL bắt buộc, không skip integration; frontend lint/test/typecheck/build) và required checks — `@lead` (#11/#12; đã chuẩn bị cấu hình để review)
+- [x] Xác minh GitHub Actions cho PR #29: backend 68 test không skip, frontend 9 test + lint/typecheck/build, e2e nền tảng 1 test — `@learning` ([CI run #31](https://github.com/DucHuynh27/E-learning-LMS/actions/runs/44504032170))
+- [ ] Lead review CI/config và xác nhận required checks của main — `@lead` (#11/#12/#18/#27; CI thực thi đã qua, review/quyền quản trị còn mở)
 - [x] Chuẩn bị contract DB, các quyết định FK/cascade cần chốt và ma trận bàn giao QA tại [`docs/learning-integration.md`](docs/learning-integration.md) — `@learning`
 - [ ] Hỗ trợ + review + gỡ chặn — `@lead`
 
 > Kiểm tra local **2026-11-19**: **68 test backend = 34 unit + 22 service integration + 10 HTTP integration + 2 regression GET**, thêm **9 test frontend** và **1 e2e nền tảng** riêng. Các test DB dùng PostgreSQL 16 thật và Catalog fixtures. Xem docs/learning.md và docs/learning-review.md. Checkbox implementation không đồng nghĩa nghiệm thu tích hợp; Catalog thật/FK/cascade, Lead review và QA vẫn mở.
 >
 > PR #10 đã merge bằng admin bypass theo ghi nhận Lead, không phải approval hoặc QA ký. Các issue của Lead #11/#12/#18/#27 tiếp tục chờ owner xác nhận; cấu hình CI/config được chuẩn bị riêng để review.
+>
+> Xác minh CI **2026-11-19**: run #31 của PR #29 trên head `16c3636` (merge ref `3f4abd0`) đã qua cả ba job. Log xác nhận `68 passed`, `9 passed`, `1 passed`; đây là bằng chứng CI thực tế, không chỉ kết quả local. PR #29 vẫn chờ Lead review; Catalog thật/FK/cascade và QA xuyên module chưa hoàn tất.
 
 ## Sprint 3 — Certificate + Realtime + Hardening (Tuần 3)
 

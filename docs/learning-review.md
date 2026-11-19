@@ -1,6 +1,6 @@
 # Bàn giao sửa issue Learning — 2026-11-19
 
-13 issue được gán cho @ljq-exe. Bảng dưới ghi implementation và bằng chứng local, chưa thay thế review/merge hoặc tự đóng issue.
+13 issue được gán cho @ljq-exe. Bảng dưới ghi implementation và bằng chứng kiểm thử, chưa thay thế review/merge hoặc tự đóng issue.
 
 | Issue | Thay đổi | Bằng chứng |
 | --- | --- | --- |
@@ -19,5 +19,7 @@
 | #26 | Hoàn tác thay đổi root layout/carousel từ PR Learning về scaffold PR #9 | So sánh file với commit 4d0b666; Learning dùng chrome chung |
 
 Các issue #11/#12 (CI), #18 (config) và #27 (process) thuộc Lead. Phần cấu hình cần để chạy các regression được chuẩn bị ở commit riêng cho Lead review. Không sửa branch protection, không cấp approval và không ghi nhận QA thay người phụ trách.
+
+Đã xác minh [CI run #31 trên PR #29](https://github.com/DucHuynh27/E-learning-LMS/actions/runs/44504032170): cả ba job thành công trên head `16c3636` (merge ref `3f4abd0`), log có 68 test backend không skip, 9 test frontend và 1 e2e nền tảng qua; lint/build/typecheck tương ứng cũng qua. PR chưa có review tại thời điểm kiểm tra; các issue giữ mở cho Lead đối chiếu.
 
 Số test hiện tại và giới hạn kiểm chứng xem learning.md. Frontend/shared owner: Lead phụ trách app/layout.tsx và components/ui/*. Learning chỉ sở hữu dashboard/state/stylesheet và route /learning; thay đổi scaffold sau này phải review riêng.

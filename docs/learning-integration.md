@@ -46,7 +46,7 @@ E2E nền tảng `backend/test/app.e2e-spec.ts` hiện chỉ kiểm tra `/v1`; k
 
 ## 4. CI và tổng bài published
 
-Cấu hình đề xuất cho Lead: lint-and-test có PostgreSQL service, lint/build và npm test đầy đủ, không skip integration. Job frontend cài frozen lockfile rồi lint/test/typecheck/build. Job e2e chỉ kiểm tra nền tảng riêng. Số test hiện tại xem learning.md; kết quả local không đại diện cho required status checks trên GitHub.
+Cấu hình trong PR #29: lint-and-test có PostgreSQL service, lint/build và npm test đầy đủ, không skip integration. Job frontend cài frozen lockfile rồi lint/test/typecheck/build. Job e2e kiểm tra nền tảng riêng. Đã đọc log [CI run #31](https://github.com/DucHuynh27/E-learning-LMS/actions/runs/44504032170): backend 68 test, frontend 9 test và e2e 1 test đều qua trên head `16c3636` (merge ref `3f4abd0`). Lead vẫn cần review cấu hình và xác nhận required checks; chưa dùng kết quả với fixtures để tick tích hợp Catalog thật.
 
 PublishedLessonCache và invalidate đã bỏ. GET đọc snapshot chỉ đọc, PATCH tổng hợp số bài hiện tại từ PostgreSQL trong một câu SQL theo course; không gọi Redis trong lúc giữ row lock. Content không cần gửi cache invalidation để bảo đảm tỷ lệ/chứng chỉ. Khi nội dung thay đổi, GET phản ánh dữ liệu hiện tại còn enrolment denormalized được cập nhật ở PATCH kế tiếp; nếu cần đồng bộ ngay từ Content thì cần cơ chế ghi riêng do Content/Lead chốt.
 
