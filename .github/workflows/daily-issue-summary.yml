@@ -49,10 +49,21 @@ jobs:
             | .[] | (if .k == "chưa gán" then "chưa gán: \(.n)" else "@\(.k): \(.n)" end)
           ' issues.json)
 
+          # Ưu tiên dùng quy ước label của repo: P1/P2/P3 -> tên tiếng Việt.
           mapfile -t priority_lines < <(jq -r '
-            [ .[] | ([.labels[].name | select(startswith("priority:")) | sub("^priority:"; "")] | if length == 0 then ["chưa đặt"] else . end)[] ]
+            def plabel:
+              if . == "P1" then "Ưu tiên cao"
+              elif . == "P2" then "Ưu tiên trung bình"
+              elif . == "P3" then "Ưu tiên thấp"
+              else "chưa đặt" end;
+            def prank:
+              if . == "Ưu tiên cao" then 1
+              elif . == "Ưu tiên trung bình" then 2
+              elif . == "Ưu tiên thấp" then 3
+              else 9 end;
+            [ .[] | ([.labels[].name | select(test("^P[0-9]+$"))] | if length == 0 then ["chưa đặt"] else . end)[] | plabel ]
             | group_by(.) | map({ k: .[0], n: length })
-            | sort_by(if .k == "high" then 1 elif .k == "medium" then 2 elif .k == "low" then 3 elif .k == "chưa đặt" then 9 else 5 end)
+            | sort_by(.k | prank)
             | .[] | "\(.k): \(.n)"
           ' issues.json)
 
