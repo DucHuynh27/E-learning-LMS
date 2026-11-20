@@ -1,6 +1,7 @@
-import { plainToInstance, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsInt,
+  IsBoolean,
   IsNotEmpty,
   IsString,
   Max,
@@ -22,9 +23,17 @@ export class EnvVars {
   @IsString() @IsNotEmpty() DB_NAME: string;
 
   @IsString() @IsNotEmpty() REDIS_PASSWORD: string;
+  @IsString() @IsNotEmpty() REDIS_HOST: string;
+  @IsString() REDIS_USERNAME: string = '';
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
+    obj[key] === 'true' ? true : obj[key] === 'false' ? false : obj[key],
+  )
+  @IsBoolean()
+  REDIS_TLS: boolean = false;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) REDIS_PORT: number;
 
   @IsString() @IsNotEmpty() MINIO_ROOT_USER: string;
+  @IsString() @IsNotEmpty() MINIO_HOST: string;
   @IsString() @IsNotEmpty() MINIO_ROOT_PASSWORD: string;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) MINIO_API_PORT: number;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) MINIO_CONSOLE_PORT: number;

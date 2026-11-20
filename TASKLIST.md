@@ -74,26 +74,28 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 **Exit criteria:** % tiến độ cập nhật đúng · video hiện diện `READY` (hoặc upload+serve) · nộp quiz ra điểm.
 
 - [x] Entity LessonProgress + PATCH progress (ngưỡng 0.9), unit/integration — `@learning`
-- [x] Tính `progressPct` + update Enrolment, cache tổng lesson published và giải thích index — `@learning`
+- [x] Tính `progressPct` + update Enrolment, tổng hợp PostgreSQL theo course và giải thích index — `@learning`
 - [x] Entity Quiz/Question/Option + API tạo/thay quiz đúng owner, ẩn đáp án đúng — `@learning`
 - [x] Entity QuizAttempt/QuizAnswer + API nộp bài, chấm server-side, giới hạn lượt/thời gian và chống nộp trùng — `@learning`
 - [x] Kiểm thử HTTP module Learning: JWT/role, DTO, envelope/lỗi, chấm điểm, deadline/lượt thi và chứng chỉ public với PostgreSQL + fixtures Catalog — `@learning`
 - [x] Sửa lỗi snapshot khi đọc/sửa quiz đồng thời, deadline tổng Redis và cache cũ làm tụt trạng thái khoá đã hoàn thành; có test hồi quy — `@learning`
 - [x] Đồng bộ frontend scaffold từ `main`, tách dashboard `/learning` và dùng deadline quiz do PostgreSQL cấp, kiểm tra HTTP/integration cho deadline và lượt không giới hạn — `@learning`
+- [x] Frontend Learning chịu được sessionStorage bị chặn/hết dung lượng và loại dữ liệu lượt thi sai cấu trúc; 17 test frontend — `@learning`
 - [ ] S3Module (MinIO `forcePathStyle`) + UploadsModule — `@media`
 - [ ] MediaModule: lưu metadata + serve presigned GET — `@media`
 - [ ] BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`
 - [ ] e2e cho progress + quiz — `@qa`
 - [ ] Tích hợp Learning với schema/module Catalog thật và chốt FK/cascade tới Course/Lesson — `@learning` + `@content` + `@lead`
-- [x] Cấu hình `LEARNING_DB_TESTS=1` cho integration PostgreSQL trong CI, đợi DB healthy và giữ lỗi test làm job thất bại; đã chạy đúng lệnh CI qua 32 test local — `@learning` (chờ Lead review workflow)
+- [x] Xác minh GitHub Actions cho PR #29: backend 68 test không skip, frontend 9 test + lint/typecheck/build, e2e nền tảng 1 test — `@learning` ([CI run #31](https://github.com/DucHuynh27/E-learning-LMS/actions/runs/44504032170))
+- [ ] Lead review CI/config và xác nhận required checks của main — `@lead` (#11/#12/#18/#27; CI thực thi đã qua, review/quyền quản trị còn mở)
 - [x] Chuẩn bị contract DB, các quyết định FK/cascade cần chốt và ma trận bàn giao QA tại [`docs/learning-integration.md`](docs/learning-integration.md) — `@learning`
 - [ ] Hỗ trợ + review + gỡ chặn — `@lead`
 
-> Rà soát ngày **2026-11-08**: phần implementation Learning chạy với fixtures Catalog trong schema riêng. Kiểm tra local ngày 2026-11-08: **62 test** (gồm 22 integration service PostgreSQL và 10 HTTP module integration), **1 e2e nền tảng**, lint/build/TypeScript backend đều qua. Frontend không thay đổi trong lần rà soát này; lint/build frontend đã qua ở lần kiểm tra 2026-11-07. E2E nền tảng và module integration với fixtures chưa thay thế nghiệm thu QA với Catalog thật.
+> Bộ test hiện tại **2026-11-19**: **71 test backend = 37 unit + 22 service integration + 10 HTTP integration + 2 regression GET**, thêm **17 test frontend** và **1 e2e nền tảng** riêng. Đã chạy local 37 unit sau khi thêm ba regression PostgreSQL health; các test DB dùng PostgreSQL 16 thật và Catalog fixtures. Xem docs/learning.md và docs/learning-review.md. Checkbox implementation không đồng nghĩa nghiệm thu tích hợp; Catalog thật/FK/cascade, Lead review và QA vẫn mở.
 >
-> Bàn giao: xem [`docs/learning.md`](docs/learning.md) và [`docs/learning-wiring.patch`](docs/learning-wiring.patch). Wiring đã được áp dụng; vẫn cần Lead review `AppModule`/`DataSource`, Content cung cấp schema thật và QA xác nhận e2e trước khi nghiệm thu Done toàn hệ thống.
-
-> Cập nhật **2026-11-17**: thêm bước Learning PostgreSQL integration vào CI, đã kiểm tra local với pnpm 12.11.2: **32/32 test integration** qua, không skip. GitHub Actions cần xác nhận trên PR. Sau fetch, `origin/feat/content` vẫn ở `c76b1b4`; phần Catalog thật/FK/cascade và QA e2e tiếp tục để mở.
+> PR #10 đã merge bằng admin bypass theo ghi nhận Lead, không phải approval hoặc QA ký. Các issue của Lead #11/#12/#18/#27 tiếp tục chờ owner xác nhận; cấu hình CI/config được chuẩn bị riêng để review.
+>
+> Xác minh CI **2026-11-19**: run #31 của PR #29 trên head `16c3636` (merge ref `3f4abd0`) đã qua cả ba job. Log xác nhận `68 passed`, `9 passed`, `1 passed`; đây là bằng chứng CI thực tế, không chỉ kết quả local. PR #29 vẫn chờ Lead review; Catalog thật/FK/cascade và QA xuyên module chưa hoàn tất.
 
 ## Sprint 3 — Certificate + Realtime + Hardening (Tuần 3)
 
@@ -102,6 +104,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Certificate: entity + tự phát khi học đủ mọi lesson published (idempotent) + JSON/HTML tra cứu, unit/integration — `@learning`
 - [ ] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa`
 - [x] HealthModule (Postgres/Redis/MinIO): implementation + wiring + unit/probe local — `@learning`
+- [x] PostgreSQL health probe dùng chung query đang chờ, giữ hạn response 1 giây và phục hồi sau kết quả muộn; ba regression concurrency/timeout — `@learning`
 - [ ] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
 - [ ] e2e toàn hệ + script demo — `@qa`
 - [x] Demo Learning riêng: seed/start backend port 3002 và frontend Next.js port 3100, kết nối Auth/Progress/Quiz/Certificate — `@learning`

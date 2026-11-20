@@ -3,9 +3,6 @@ on:
   pull_request:
   push:
     branches: [main]
-defaults:
-  run:
-    working-directory: backend
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -13,6 +10,26 @@ concurrency:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lms
+          POSTGRES_PASSWORD: lms_ci_test_password
+          POSTGRES_DB: lms
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U lms -d lms"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5433"
+      DB_USERNAME: lms
+      DB_PASSWORD: lms_ci_test_password
+      DB_NAME: lms
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -24,10 +41,14 @@ jobs:
           cache-dependency-path: backend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm build
       - run: pnpm test
 
   e2e:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -46,8 +67,24 @@ jobs:
       - name: Bật hạ tầng
         # e2e hiện chỉ cần Postgres. Sẽ bổ sung redis/minio khi test cần dùng.
         run: docker compose up -d --wait --wait-timeout 90 postgres
-      - name: Learning PostgreSQL integration
-        run: pnpm test src/learning/learning.integration.spec.ts src/learning/learning.http.integration.spec.ts
-        env:
-          LEARNING_DB_TESTS: '1'
       - run: pnpm test:e2e
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 12 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm build

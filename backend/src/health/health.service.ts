@@ -5,16 +5,17 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
-import { PublishedLessonCache } from '../learning/published-lesson-cache.service.js';
+import { RedisHealthProbe } from './redis-health-probe.service.js';
 import { LearningInfrastructureDto } from '../learning/dto/learning-infrastructure.dto.js';
 
 @Injectable()
 export class HealthService {
   private readonly config: LearningInfrastructureDto;
+  private postgresQuery?: Promise<boolean>;
   constructor(
     @Inject(DataSource) private readonly source: DataSource,
     @Inject(ConfigService) config: ConfigService,
-    @Inject(PublishedLessonCache) private readonly redis: PublishedLessonCache,
+    @Inject(RedisHealthProbe) private readonly redis: RedisHealthProbe,
   ) {
     this.config = LearningInfrastructureDto.from(config);
   }
@@ -47,11 +48,18 @@ export class HealthService {
   private async postgres(): Promise<boolean> {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      return await Promise.race([
-        this.source
+      if (!this.postgresQuery) {
+        // A response timeout does not cancel SQL; retain the query until it settles.
+        this.postgresQuery = this.source
           .query('SELECT 1')
           .then(() => true)
-          .catch(() => false),
+          .catch(() => false)
+          .finally(() => {
+            this.postgresQuery = undefined;
+          });
+      }
+      return await Promise.race([
+        this.postgresQuery,
         new Promise<boolean>((resolve) => {
           timer = setTimeout(() => resolve(false), 1000);
           timer.unref();

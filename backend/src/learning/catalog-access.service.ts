@@ -108,18 +108,4 @@ export class CatalogAccess {
     return enrolment;
   }
 
-  async publishedCount(
-    courseId: string,
-    manager: EntityManager,
-  ): Promise<number> {
-    const [row] = await this.query<{ count: number }>(
-      manager,
-      `
-      SELECT COUNT(*)::int AS "count" FROM "lessons" l
-      JOIN "sections" s ON s."id" = l."sectionId"
-      WHERE s."courseId" = $1 AND l."isPublished" = true`,
-      [courseId],
-    );
-    return row.count;
-  }
 }

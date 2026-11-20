@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { DataSource } from 'typeorm';
 import { Role, User } from '../user/user.entity.js';
@@ -13,9 +12,8 @@ import { QuizAnswer, QuizAttempt } from '../attempts/quiz-attempt.entity.js';
 import { Option } from '../quizzes/quiz.entity.js';
 import { LEARNING_ENTITIES } from './learning.entities.js';
 import { CatalogAccess } from './catalog-access.service.js';
-import { PublishedLessonCache } from './published-lesson-cache.service.js';
 
-describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
+describe(
   'Learning services with PostgreSQL',
   () => {
     const schema = `learning_test_${randomUUID().replaceAll('-', '')}`;
@@ -24,7 +22,6 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
     let certificates: CertificatesService;
     let quizzes: QuizzesService;
     let attempts: AttemptsService;
-    let cache: PublishedLessonCache;
     let student: AuthenticatedUser;
     let otherStudent: AuthenticatedUser;
     let teacher: AuthenticatedUser;
@@ -54,20 +51,17 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       ).toBe(schema);
       // These tables model only the published Catalog contract; production Catalog is owned by @content.
       await source.query(`
-      CREATE TABLE "users" ("id" uuid PRIMARY KEY);
-      CREATE TABLE "courses" ("id" uuid PRIMARY KEY, "instructorId" uuid REFERENCES "users"("id") ON DELETE CASCADE, "status" text NOT NULL);
-      CREATE TABLE "sections" ("id" uuid PRIMARY KEY, "courseId" uuid REFERENCES "courses"("id") ON DELETE CASCADE, "position" integer NOT NULL);
-      CREATE TABLE "lessons" ("id" uuid PRIMARY KEY, "sectionId" uuid REFERENCES "sections"("id") ON DELETE CASCADE, "position" integer NOT NULL, "durationSec" integer NOT NULL, "isPublished" boolean NOT NULL);
-      CREATE TABLE "enrolments" ("id" uuid PRIMARY KEY, "userId" uuid REFERENCES "users"("id") ON DELETE CASCADE, "courseId" uuid REFERENCES "courses"("id") ON DELETE CASCADE,
-        "status" text NOT NULL DEFAULT 'ACTIVE', "progressPct" integer NOT NULL DEFAULT 0, "completedAt" timestamptz, UNIQUE ("userId", "courseId"));
-    `);
+        CREATE TABLE "users" ("id" uuid PRIMARY KEY);
+        CREATE TABLE "courses" ("id" uuid PRIMARY KEY, "instructorId" uuid REFERENCES "users"("id") ON DELETE CASCADE, "status" text NOT NULL);
+        CREATE TABLE "sections" ("id" uuid PRIMARY KEY, "courseId" uuid REFERENCES "courses"("id") ON DELETE CASCADE, "position" integer NOT NULL);
+        CREATE TABLE "lessons" ("id" uuid PRIMARY KEY, "sectionId" uuid REFERENCES "sections"("id") ON DELETE CASCADE, "position" integer NOT NULL, "durationSec" integer NOT NULL, "isPublished" boolean NOT NULL);
+        CREATE TABLE "enrolments" ("id" uuid PRIMARY KEY, "userId" uuid REFERENCES "users"("id") ON DELETE CASCADE, "courseId" uuid REFERENCES "courses"("id") ON DELETE CASCADE,
+          "status" text NOT NULL DEFAULT 'ACTIVE', "progressPct" integer NOT NULL DEFAULT 0, "completedAt" timestamptz, UNIQUE ("userId", "courseId"));
+      `);
       await source.runMigrations({ transaction: 'all' });
       const catalog = new CatalogAccess(source);
-      cache = new PublishedLessonCache(
-        new ConfigService({ REDIS_HOST: '127.0.0.1', REDIS_PORT: 1 }),
-      );
       certificates = new CertificatesService(source);
-      progress = new ProgressService(source, catalog, cache, certificates);
+      progress = new ProgressService(source, catalog, certificates);
       quizzes = new QuizzesService(source, catalog);
       attempts = new AttemptsService(source, catalog, quizzes);
     }, 20000);
@@ -105,10 +99,12 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
         courseId,
       ]);
       for (const [position, id] of lessons.entries())
-        await source.query(
-          'INSERT INTO "lessons" VALUES ($1, $2, $3, 100, $4)',
-          [id, sectionId, position, position < 2],
-        );
+        await source.query('INSERT INTO "lessons" VALUES ($1, $2, $3, 100, $4)', [
+          id,
+          sectionId,
+          position,
+          position < 2,
+        ]);
       await source.query(
         'INSERT INTO "enrolments" ("id", "userId", "courseId") VALUES ($1, $2, $3)',
         [randomUUID(), student.userId, courseId],
@@ -198,9 +194,11 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       });
       const [certificate] = await certificates.mine(student.userId);
       expect(certificate.serialNo).toMatch(/^LMS-/);
-      expect(await certificates.lookup(certificate.serialNo)).toEqual(
-        certificate,
-      );
+      expect(await certificates.lookup(certificate.serialNo)).toEqual({
+        serialNo: certificate.serialNo,
+        courseId,
+        issuedAt: certificate.issuedAt,
+      });
       await progress.update(student, lessons[0], { watchedSec: 0 });
       expect(await certificates.mine(student.userId)).toEqual([certificate]);
       expect(await certificates.mine(otherStudent.userId)).toEqual([]);
@@ -209,19 +207,17 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       });
     });
 
-    it('does not issue a certificate from a stale low cache count', async () => {
-      vi.spyOn(cache, 'get').mockResolvedValue(1);
+    it('counts published lessons from PostgreSQL before issuing a certificate', async () => {
       await progress.update(student, lessons[0], { watchedSec: 90 });
       expect((await enrolment()).progressPct).toBe(50);
       expect(await certificates.mine(student.userId)).toHaveLength(0);
     });
 
-    it('regression: a stale high cache count cannot undo a completed enrolment', async () => {
+    it('preserves completion on repeated writes without consulting Redis', async () => {
       for (const lessonId of lessons.slice(0, 2))
         await progress.update(student, lessonId, { watchedSec: 90 });
       const completed = await enrolment();
       const issued = await certificates.mine(student.userId);
-      vi.spyOn(cache, 'get').mockResolvedValue(50);
       await progress.update(student, lessons[0], { watchedSec: 90 });
       expect(await enrolment()).toMatchObject({
         progressPct: 100,
@@ -239,7 +235,6 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
         'UPDATE "lessons" SET "isPublished" = true WHERE "id" = $1',
         [lessons[2]],
       );
-      vi.spyOn(cache, 'get').mockResolvedValue(2);
       await progress.update(student, lessons[0], { watchedSec: 90 });
       expect(await enrolment()).toMatchObject({
         progressPct: 67,
@@ -256,10 +251,11 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       );
       await source.query(
         `INSERT INTO "lesson_progress" ("userId", "lessonId", "watchedSec", "completed", "completedAt")
-      SELECT $1, "id", 100, true, CURRENT_TIMESTAMP FROM "lessons" WHERE "isPublished" = true ORDER BY "position" LIMIT 199`,
+        SELECT $1, "id", 100, true, CURRENT_TIMESTAMP FROM "lessons" WHERE "isPublished" = true ORDER BY "position" LIMIT 199`,
         [student.userId],
       );
       expect((await progress.course(student, courseId)).progressPct).toBe(100);
+      await progress.update(student, lessons[0], { watchedSec: 90 });
       expect((await enrolment()).status).toBe('ACTIVE');
       expect(await certificates.mine(student.userId)).toHaveLength(0);
     });
@@ -469,6 +465,7 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       }
       await expect(attempts.start(student, lessons[0])).rejects.toMatchObject({
         status: 409,
+        message: 'Maximum of 3 quiz attempts reached',
       });
     });
 

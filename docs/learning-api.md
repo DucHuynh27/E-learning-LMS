@@ -34,7 +34,7 @@
 | POST | `/v1/lessons/:lessonId/quiz/attempts` | enrolled STUDENT | — | 201 `{ attemptId, questions, startedAt, expiresAt }` |
 | POST | `/v1/quiz-attempts/:id/submit` | STUDENT (của mình) | `SubmitAttemptDto` | 200 `{ score, passed }` |
 | GET | `/v1/certificates/me` | Auth | — | 200 `[CertificateResponse]` |
-| GET | `/v1/certificates/:serialNo` | **Public** | — | 200 `CertificateResponse` |
+| GET | `/v1/certificates/:serialNo` | **Public** | — | 200 `PublicCertificateResponse` |
 | GET | `/v1/certificates/:serialNo/verify` | **Public** | — | 200 HTML xác thực chứng chỉ |
 | GET | `/v1/health` | **Public** | — | 200 `{ status:"ok", checks:{ postgres, redis, minio } }` hoặc 503 |
 
@@ -43,6 +43,7 @@
 - `watchedSec` không giảm khi request đến muộn; giới hạn tối đa bằng `durationSec`. Lesson duration 0 hoàn thành với `watchedSec = 0`. `completedAt` được giữ nguyên sau lần hoàn thành đầu tiên.
 - **Tiến độ khoá:** `progressPct = round(completedLessons / publishedLessons * 100)` → cập nhật `Enrolment` (denormalized).
 - Chỉ đếm lesson `isPublished = true`; khoá không có lesson published có tiến độ 0. GET tiến độ liệt kê mọi lesson published, kể cả lesson chưa học.
+- GET tiến độ chỉ đọc snapshot PostgreSQL: không khoá enrolment để ghi, không cập nhật trạng thái và không cấp chứng chỉ. PATCH là điểm cập nhật enrolment/cấp chứng chỉ; tổng bài và số bài hoàn thành luôn được đếm từ PostgreSQL, không phụ thuộc Redis hoặc invalidation của Content.
 - **Chứng chỉ:** khi `progressPct == 100` → cấp 1 chứng chỉ (idempotent nhờ unique `(userId, courseId)`); sinh `serialNo` duy nhất.
 - Điều kiện cấp chứng chỉ và đặt Enrolment `COMPLETED` còn yêu cầu `completedLessons == publishedLessons > 0`, tránh cấp sớm khi 199/200 bị làm tròn thành 100. Không sinh PDF/email theo scope đã chốt trong `TASKLIST.md`.
 - **Quiz:** chấm **server-side tuyệt đối**; `score` = % câu đúng; `passed = score >= passScore`; không trả `isCorrect` cho student; tôn trọng `timeLimitSec`; giới hạn số lần nộp.
@@ -64,7 +65,8 @@ LessonProgressResponse { lessonId, watchedSec, completed, completedAt }
 QuizResponse           { id, lessonId, passScore, timeLimitSec, questions:[{ id, content, options:[{ id, content }] }] }
                        // KHÔNG có isCorrect
 AttemptResultResponse  { attemptId, score, passed, submittedAt }
-CertificateResponse    { serialNo, courseId, userId, issuedAt }
+CertificateResponse    { serialNo, courseId, userId, issuedAt } // chỉ /certificates/me đã xác thực
+PublicCertificateResponse { serialNo, courseId, issuedAt } // JSON public và HTML verify không có userId
 ```
 
 ## 8. Mã lỗi
