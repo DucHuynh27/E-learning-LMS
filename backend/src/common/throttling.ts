@@ -17,10 +17,40 @@ export const REGISTER_THROTTLE = { ttl: 60_000, limit: 10 } as const;
 // Refresh access token xảy ra định kỳ nên rộng hơn login.
 export const REFRESH_THROTTLE = { ttl: 60_000, limit: 20 } as const;
 
+// Bắt attempt rẻ và có thể lặp; submit là điểm nhạy cảm nên siết chặt hơn.
+export const QUIZ_START_THROTTLE = { ttl: 60_000, limit: 10 } as const;
+export const QUIZ_SUBMIT_THROTTLE = { ttl: 60_000, limit: 5 } as const;
+
+// Đọc quiz là thao tác nhẹ và có thể lặp khi dashboard tải lại: ngưỡng rộng.
+export const QUIZ_READ_THROTTLE = { ttl: 60_000, limit: 30 } as const;
+
+// Lớp throttle thô theo IP chạy TRƯỚC auth (issue #31): chặn spam ẩn danh (dội 401
+// vào route bảo vệ) mà throttler theo tài khoản (chạy sau auth) không phủ tới. Ngưỡng
+// rộng để không ảnh hưởng luồng học bình thường của một IP/NAT.
+export const ANONYMOUS_IP_THROTTLE = { ttl: 60_000, limit: 300 } as const;
+
+export type AnonymousIpThrottleOptions = {
+  ttl: number;
+  limit: number;
+};
+
 export const THROTTLE_ERROR_MESSAGE = 'Too many requests';
 
-// Login đếm theo tài khoản thay vì chỉ theo IP: chặn dò mật khẩu phân tán nhiều IP
-// vào cùng một email, đồng thời không khoá lây người dùng chung NAT.
+type RequestWithUser = {
+  user?: { userId?: string };
+  ip?: string;
+};
+
+// Tracker mặc định: đếm theo tài khoản khi request đã xác thực, ngược lại theo IP.
+// ThrottlerGuard chạy sau guard xác thực nên `req.user` đã sẵn có — nhờ vậy nhiều
+// học viên chung một IP (NAT, proxy) vẫn có bucket riêng.
+export const accountOrIpTracker: ThrottlerGetTrackerFunction = (req) => {
+  const userId = (req as RequestWithUser).user?.userId;
+  return userId ? `user:${userId}` : `ip:${String((req as RequestWithUser).ip)}`;
+};
+
+// Login là route công khai (chưa có user): đếm theo tài khoản đang nhắm tới qua email,
+// chặn dò mật khẩu phân tán nhiều IP vào cùng account.
 export const loginTracker: ThrottlerGetTrackerFunction = (req) => {
   const email =
     typeof req.body?.email === 'string'
@@ -56,6 +86,7 @@ export function throttlerRootOptions(
   const storage = createThrottlerStorage(config);
   return {
     errorMessage: THROTTLE_ERROR_MESSAGE,
+    getTracker: accountOrIpTracker,
     throttlers: [{ ...GLOBAL_THROTTLE }],
     ...(storage ? { storage } : {}),
   };

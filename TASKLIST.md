@@ -107,9 +107,9 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] PostgreSQL health probe dùng chung query đang chờ, giữ hạn response 1 giây và phục hồi sau kết quả muộn; ba regression concurrency/timeout — `@learning`
 - [ ] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
   - [x] CORS trong `configureApp` + `CORS_ORIGIN` (dùng chung runtime/e2e) — `@lead`
-  - [x] Rate limit: toàn cục + `login` (5, theo tài khoản) / `register` (10) / `refresh` (20), `trust proxy` cấu hình, 429 sạch — `@lead`
+  - [x] Rate limit: throttler chạy sau auth (đếm theo tài khoản), `login` 5 (theo email) / `register` 10 / `refresh` 20, `trust proxy` cấu hình, 429 sạch — `@lead`
   - [x] Ẩn field nhạy cảm: `@Exclude` `passwordHash` + test — `@lead`
-  - [ ] Rate limit route quiz — sửa trực tiếp controller `@learning`, **hoãn tới khi Lead yêu cầu** — `@lead` + `@learning`
+  - [x] Rate limit route quiz: đọc 30 / start 10 / submit 5 req/60s, đếm theo tài khoản — `@lead` + `@learning` (cần `@learning` review)
 - [ ] e2e toàn hệ + script demo — `@qa`
 - [x] Demo Learning riêng: seed/start backend port 3002 và frontend Next.js port 3100, kết nối Auth/Progress/Quiz/Certificate — `@learning`
 - [ ] Mỗi người: viết `docs/<module>.md` giải thích kiến trúc module mình — **cả nhóm**
@@ -117,7 +117,9 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
   - [x] Phần Auth: cập nhật `docs/auth.md` (hardening CORS/rate limit/serialize) — `@lead`
 - [x] Push origin + bật branch protection — `@lead`
 
-> Cập nhật **2026-11-19** (branch `feat/auth`): hoàn tất phần hardening thuộc `@lead` — CORS (`configureApp` + `CORS_ORIGIN`), rate limit (throttler toàn cục; `login` 5 theo tài khoản, `register` 10, `refresh` 20), `trust proxy` cấu hình qua `TRUST_PROXY` (mặc định tắt), ẩn `passwordHash` (`@Exclude`). Kiểm tra local: `pnpm lint` sạch, **54 test** (unit + integration throttler/trust-proxy/guard-order) qua, `pnpm build` qua, **1 e2e nền tảng** qua. Xử lý các issue review #30–#35 (đã xác minh guard order đúng, chỉ thêm test hồi quy). Còn lại: rate limit route quiz (hoãn, sửa controller `@learning`) và e2e auth do `@qa`.
+> Cập nhật **2026-11-19** (branch `feat/auth`): hoàn tất phần hardening thuộc `@lead` — CORS (`configureApp` + `CORS_ORIGIN`), rate limit (throttler toàn cục; `login` 5 theo tài khoản, `register` 10, `refresh` 20), `trust proxy` cấu hình qua `TRUST_PROXY` (mặc định tắt), ẩn `passwordHash` (`@Exclude`). Kiểm tra local: `pnpm lint` sạch, **54 test** (unit + integration throttler/trust-proxy/guard-order) qua, `pnpm build` qua, **1 e2e nền tảng** qua. Xử lý các issue review #30–#35 (đã xác minh guard order đúng, chỉ thêm test hồi quy).
+
+> Cập nhật **2026-11-19** (branch `feat/quiz-rate-limit`, PR #36): rate limit quiz cho đọc/start/submit attempt; sau review đã xử lý #37 (đưa `ThrottlerGuard` chạy **sau** auth → đếm theo tài khoản, không dồn bucket qua proxy), #38 (tách ngưỡng start/submit) và #39 (throttle route đọc quiz). Ripple cross-module: `learning.http.integration.spec.ts` (`@learning`) override throttler storage để test nghiệp vụ không chạm ngưỡng. Kiểm tra local: `pnpm lint` sạch, **58 test** qua, **32 integration Learning** qua (PostgreSQL), `pnpm build` qua, **1 e2e** qua.
 
 ## Đã cắt (không làm trong 3 tuần)
 - Transcode HLS đa bitrate + ffmpeg
