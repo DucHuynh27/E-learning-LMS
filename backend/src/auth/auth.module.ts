@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AnonymousIpThrottleGuard } from '../common/guards/anonymous-ip-throttle.guard.js';
 import { throttlerRootOptions } from '../common/throttling.js';
 import { UserModule } from '../user/user.module.js';
 import { AuthController } from './auth.controller.js';
@@ -27,6 +28,9 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
   providers: [
     AuthService,
     JwtStrategy,
+    // Lớp throttle IP thô chạy TRƯỚC auth (issue #31): request ẩn danh (401) vẫn bị
+    // đếm và có thể 429, không né được rate limit. Bucket tách khỏi lớp theo tài khoản.
+    { provide: APP_GUARD, useClass: AnonymousIpThrottleGuard },
     // Mặc định mọi route đều yêu cầu đăng nhập; route công khai đánh dấu @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
