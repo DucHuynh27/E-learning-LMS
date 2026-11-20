@@ -17,6 +17,7 @@ jobs:
       - name: Tổng hợp issue và gửi Discord
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           REPO: ${{ github.repository }}
         run: |
@@ -24,10 +25,13 @@ jobs:
 
           TZ_VN="Asia/Ho_Chi_Minh"
 
-          # Mốc thời gian của "hôm nay theo giờ VN", quy đổi sang UTC cho GitHub search.
-          start=$(TZ="$TZ_VN" date -d "today 00:00" -u +%Y-%m-%dT%H:%M:%S+00:00)
-          end=$(TZ="$TZ_VN" date -d "tomorrow 00:00" -u +%Y-%m-%dT%H:%M:%S+00:00)
-          today_vn=$(TZ="$TZ_VN" date +%d/%m/%Y)
+          # Mốc của "hôm nay theo giờ VN" (VN cố định UTC+7, không có DST),
+          # dùng offset +0700 để không phụ thuộc tzdata của runner, rồi quy đổi sang UTC.
+          today_vn=$(TZ="$TZ_VN" date +%Y-%m-%d)
+          tomorrow_vn=$(TZ="$TZ_VN" date -d tomorrow +%Y-%m-%d)
+          today_display=$(TZ="$TZ_VN" date +%d/%m/%Y)
+          start=$(date -u -d "${today_vn} 00:00:00 +0700" +%Y-%m-%dT%H:%M:%S+00:00)
+          end=$(date -u -d "${tomorrow_vn} 00:00:00 +0700" +%Y-%m-%dT%H:%M:%S+00:00)
 
           echo "Khoảng thời gian (UTC): ${start} -> ${end}"
 
@@ -120,7 +124,7 @@ jobs:
           priority_fields=$(pack_fields "Theo ưu tiên" "${priority_lines[@]}")
 
           payload=$(jq -n \
-            --arg title "📊 Tổng kết issue — ${today_vn}" \
+            --arg title "📊 Tổng kết issue — ${today_display}" \
             --arg repo "$REPO" \
             --argjson color "$color" \
             --argjson total "$total" \
