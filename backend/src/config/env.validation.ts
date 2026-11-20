@@ -1,5 +1,6 @@
 import { plainToInstance, Type } from 'class-transformer';
 import {
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -30,6 +31,16 @@ export class EnvVars {
       'TRUST_PROXY không được là "true"; dùng số hop, loopback hoặc danh sách IP tin cậy',
   })
   TRUST_PROXY?: string;
+
+  // Nơi lưu bộ đếm rate limit: 'memory' cho một instance (mặc định), 'redis' khi chạy nhiều instance.
+  @IsOptional()
+  @IsIn(['memory', 'redis'])
+  THROTTLE_STORAGE?: 'memory' | 'redis';
+
+  // Bắt buộc khi THROTTLE_STORAGE=redis, vd redis://:password@localhost:6379.
+  @IsOptional()
+  @IsString()
+  THROTTLE_REDIS_URL?: string;
 
   @IsString() @IsNotEmpty() DB_HOST: string;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) DB_PORT: number;
