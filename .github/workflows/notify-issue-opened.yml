@@ -1,0 +1,55 @@
+name: Notify issue opened
+
+# Bắn thông báo realtime tới Discord mỗi khi có issue mới được mở.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: read
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gửi thông báo tới Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ', ') }}
+          ISSUE_ASSIGNEES: ${{ join(github.event.issue.assignees.*.login, ', ') }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          labels="${ISSUE_LABELS:-—}"
+          assignees="${ISSUE_ASSIGNEES:-chưa gán}"
+
+          # Dựng payload embed bằng jq để escape an toàn mọi ký tự của issue.
+          payload=$(jq -n \
+            --arg title "#${ISSUE_NUMBER}: ${ISSUE_TITLE}" \
+            --arg url "$ISSUE_URL" \
+            --arg author "$ISSUE_AUTHOR" \
+            --arg labels "$labels" \
+            --arg assignees "$assignees" \
+            --arg repo "$REPO" \
+            '{
+              embeds: [{
+                title: $title,
+                url: $url,
+                color: 5763719,
+                author: { name: ("Issue mới bởi @" + $author) },
+                fields: [
+                  { name: "Labels", value: $labels, inline: true },
+                  { name: "Assignees", value: $assignees, inline: true }
+                ],
+                footer: { text: $repo },
+                timestamp: (now | todate)
+              }]
+            }')
+
+          curl -sS -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK"
