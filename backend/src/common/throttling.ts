@@ -22,6 +22,16 @@ export const QUIZ_SUBMIT_THROTTLE = { ttl: 60_000, limit: 5 } as const;
 // Đọc quiz là thao tác nhẹ và có thể lặp khi dashboard tải lại: ngưỡng rộng.
 export const QUIZ_READ_THROTTLE = { ttl: 60_000, limit: 30 } as const;
 
+// Lớp throttle thô theo IP chạy TRƯỚC auth (issue #31): chặn spam ẩn danh (dội 401
+// vào route bảo vệ) mà throttler theo tài khoản (chạy sau auth) không phủ tới. Ngưỡng
+// rộng để không ảnh hưởng luồng học bình thường của một IP/NAT.
+export const ANONYMOUS_IP_THROTTLE = { ttl: 60_000, limit: 300 } as const;
+
+export type AnonymousIpThrottleOptions = {
+  ttl: number;
+  limit: number;
+};
+
 export const THROTTLE_ERROR_MESSAGE = 'Too many requests';
 
 type RequestWithUser = {
