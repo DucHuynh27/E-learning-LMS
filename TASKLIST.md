@@ -22,10 +22,10 @@ Kế hoạch thực thi E-Learning LMS trong **3 tuần** (mỗi người ~20h/t
 | Handle | Thành viên | Prompt |
 | --- | --- | --- |
 | `@lead` | Huỳnh Kim Đức | [`prompt/lead/`](prompt/lead/AGENTS.md) |
-| `@content` | _(điền tên)_ | [`prompt/dev-content/`](prompt/dev-content/AGENTS.md) |
-| `@media` | _(điền tên)_ | [`prompt/dev-media/`](prompt/dev-media/AGENTS.md) |
-| `@learning` | _(điền tên)_ | [`prompt/dev-learning/`](prompt/dev-learning/AGENTS.md) |
-| `@qa` | _(điền tên)_ | [`prompt/qa-realtime/`](prompt/qa-realtime/AGENTS.md) |
+| `@content` | Nguyễn Đức Phương Huy | [`prompt/dev-content/`](prompt/dev-content/AGENTS.md) |
+| `@media` | Đậu Xuân Quang | [`prompt/dev-media/`](prompt/dev-media/AGENTS.md) |
+| `@learning` | Phạm Ngọc Minh Quân | [`prompt/dev-learning/`](prompt/dev-learning/AGENTS.md) |
+| `@qa` | Bùi Trần Hoàn Mỹ | [`prompt/qa-realtime/`](prompt/qa-realtime/AGENTS.md) |
 
 ## Phân loại scope
 
@@ -87,7 +87,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [ ] e2e cho progress + quiz — `@qa`
 - [ ] Tích hợp Learning với schema/module Catalog thật và chốt FK/cascade tới Course/Lesson — `@learning` + `@content` + `@lead`
 - [x] Xác minh GitHub Actions cho PR #29: backend 68 test không skip, frontend 9 test + lint/typecheck/build, e2e nền tảng 1 test — `@learning` ([CI run #31](https://github.com/DucHuynh27/E-learning-LMS/actions/runs/44504032170))
-- [ ] Lead review CI/config và xác nhận required checks của main — `@lead` (#11/#12/#18/#27; CI thực thi đã qua, review/quyền quản trị còn mở)
+- [x] Lead review CI/config và xác nhận required checks của main — `@lead` (#11/#12/#18/#27 đã đóng; required checks `lint-and-test`, `e2e`, `frontend` đã xác nhận trên `main`)
 - [x] Chuẩn bị contract DB, các quyết định FK/cascade cần chốt và ma trận bàn giao QA tại [`docs/learning-integration.md`](docs/learning-integration.md) — `@learning`
 - [ ] Hỗ trợ + review + gỡ chặn — `@lead`
 
@@ -105,7 +105,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [ ] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa`
 - [x] HealthModule (Postgres/Redis/MinIO): implementation + wiring + unit/probe local — `@learning`
 - [x] PostgreSQL health probe dùng chung query đang chờ, giữ hạn response 1 giây và phục hồi sau kết quả muộn; ba regression concurrency/timeout — `@learning`
-- [ ] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
+- [x] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
   - [x] CORS trong `configureApp` + `CORS_ORIGIN` (dùng chung runtime/e2e) — `@lead`
   - [x] Rate limit: throttler chạy sau auth (đếm theo tài khoản), `login` 5 (theo email) / `register` 10 / `refresh` 20, `trust proxy` cấu hình, 429 sạch — `@lead`
   - [x] Ẩn field nhạy cảm: `@Exclude` `passwordHash` + test — `@lead`
@@ -131,3 +131,5 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - Auth/RBAC thường ngốn gần 1 tuần của Lead → nếu trượt, cắt tiếp từ dưới lên.
 - Media là module bất định nhất → spike ở Sprint 1, không để tới cuối.
 - Frontend chấm nhẹ hơn → giữ ở mức đủ demo, không đầu tư quá tay.
+
+> Cập nhật **2026-11-20**: điền tên thành viên vào bảng handle (Content = Nguyễn Đức Phương Huy, Media = Đậu Xuân Quang, Learning = Phạm Ngọc Minh Quân, QA/Realtime = Bùi Trần Hoàn Mỹ). Đánh dấu hoàn tất phần `@lead`: Hardening (auth #28, rate limit quiz #36, lớp IP trước auth #31, Redis throttler storage #56 — đã merge `main`) và xác nhận required checks của `main` (`lint-and-test`, `e2e`, `frontend`); các issue review #11/#12/#18/#27 và #30–#39 đã đóng.
