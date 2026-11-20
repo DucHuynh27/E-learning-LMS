@@ -7,7 +7,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { QnaThread } from './qna-thread.entity.js';
+import type { QnaThread } from './qna-thread.entity.js';
 
 @Entity('qna_posts')
 @Index(['threadId', 'createdAt'])
@@ -29,7 +29,7 @@ export class QnaPost {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @ManyToOne(() => QnaThread, (thread) => thread.posts, {
+  @ManyToOne('QnaThread', 'posts', {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'threadId' })

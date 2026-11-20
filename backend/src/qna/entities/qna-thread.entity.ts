@@ -6,7 +6,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { QnaPost } from './qna-post.entity.js';
+import type { QnaPost } from './qna-post.entity.js';
 
 @Entity('qna_threads')
 @Index(['courseId', 'createdAt'])
@@ -34,6 +34,6 @@ export class QnaThread {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @OneToMany(() => QnaPost, (post) => post.thread)
+  @OneToMany('QnaPost', 'thread')
   posts?: QnaPost[];
 }
