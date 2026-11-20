@@ -6,6 +6,13 @@ import {
   HttpStatus,
   Post,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import {
+  LOGIN_THROTTLE,
+  REFRESH_THROTTLE,
+  REGISTER_THROTTLE,
+  loginTracker,
+} from '../common/throttling.js';
 import { CreateUserDto } from '../user/dto/create-user.dto.js';
 import { AuthService } from './auth.service.js';
 import { CurrentUser } from './decorators/current-user.decorator.js';
@@ -19,12 +26,14 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
+  @Throttle({ default: REGISTER_THROTTLE })
   @Post('register')
   register(@Body() dto: CreateUserDto) {
     return this.auth.register(dto);
   }
 
   @Public()
+  @Throttle({ default: { ...LOGIN_THROTTLE, getTracker: loginTracker } })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   login(@Body() dto: LoginDto) {
@@ -32,6 +41,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: REFRESH_THROTTLE })
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   refresh(@Body() dto: RefreshDto) {
