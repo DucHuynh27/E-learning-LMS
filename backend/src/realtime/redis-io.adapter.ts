@@ -1,30 +1,31 @@
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { ServerOptions } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { Redis } from 'ioredis';
-import { INestApplicationContext } from '@nestjs/common';
+import { createClient } from 'redis';
+import { INestApplicationContext, Logger } from '@nestjs/common';
 
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor?: ReturnType<typeof createAdapter>;
+  private readonly adapterLogger = new Logger(RedisIoAdapter.name);
 
   constructor(
     app: INestApplicationContext,
-    private readonly redisHost: string,
-    private readonly redisPort: number,
-    private readonly redisPassword?: string,
+    private readonly redisUrl: string,
   ) {
     super(app);
   }
 
   async connectToRedis(): Promise<void> {
-    const pubClient = new Redis({
-      host: this.redisHost,
-      port: this.redisPort,
-      password: this.redisPassword || undefined,
-    });
-    const subClient = pubClient.duplicate();
+    try {
+      const pubClient = createClient({ url: this.redisUrl });
+      const subClient = pubClient.duplicate();
 
-    this.adapterConstructor = createAdapter(pubClient, subClient);
+      await Promise.all([pubClient.connect(), subClient.connect()]);
+      this.adapterConstructor = createAdapter(pubClient, subClient);
+      this.adapterLogger.log('Redis adapter for Socket.io successfully connected');
+    } catch (error) {
+      this.adapterLogger.warn(`Failed to connect RedisIoAdapter: ${String(error)}`);
+    }
   }
 
   override createIOServer(port: number, options?: ServerOptions): any {

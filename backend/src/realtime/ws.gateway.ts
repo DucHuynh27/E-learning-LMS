@@ -9,16 +9,27 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { Logger } from '@nestjs/common';
-import { JwtPayload } from '../auth/interfaces/jwt-payload.interface.js';
+import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from '@nestjs/common';
+import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface.js';
+import { QnaCatalogAccess } from '../qna/qna-catalog-access.service.js';
+import { resolveCorsOrigins } from '../bootstrap.js';
 
-interface AuthenticatedSocket extends Socket {
-  user?: JwtPayload;
+export interface AuthenticatedSocket extends Socket {
+  user?: AuthenticatedUser;
 }
 
+@Injectable()
 @WebSocketGateway({
-  cors: {
-    origin: '*',
+  cors: (req: any, callback: any) => {
+    const origins = resolveCorsOrigins(process.env.CORS_ORIGIN);
+    const origin = req.headers?.origin;
+    if (!origin || origins.includes(origin)) {
+      callback(null, { origin: true, credentials: true });
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
   },
 })
 export class WsGateway implements OnGatewayConnection {
@@ -27,7 +38,11 @@ export class WsGateway implements OnGatewayConnection {
 
   private readonly logger = new Logger(WsGateway.name);
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    private readonly catalogAccess: QnaCatalogAccess,
+  ) {}
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
@@ -41,13 +56,18 @@ export class WsGateway implements OnGatewayConnection {
         return;
       }
 
+      const secret = this.configService.getOrThrow<string>('JWT_ACCESS_SECRET');
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: process.env.JWT_ACCESS_SECRET,
+        secret,
       });
 
-      client.user = payload;
-      // Auto join personal room for notifications
-      await client.join(`user:${payload.sub}`);
+      client.user = {
+        userId: payload.sub,
+        email: payload.email,
+        role: payload.role,
+      };
+
+      await client.join(`user:${client.user.userId}`);
     } catch {
       this.logger.warn(`Invalid token on socket handshake ${client.id}`);
       client.disconnect();
@@ -67,6 +87,15 @@ export class WsGateway implements OnGatewayConnection {
       return { ok: false, error: 'courseId is required' };
     }
 
+    const { canAccess } = await this.catalogAccess.checkAccess(
+      data.courseId,
+      client.user,
+    );
+
+    if (!canAccess) {
+      return { ok: false, error: 'Forbidden: not enrolled or instructor' };
+    }
+
     await client.join(`course:${data.courseId}`);
     return { ok: true };
   }
@@ -83,10 +112,10 @@ export class WsGateway implements OnGatewayConnection {
   }
 
   emitToCourse(courseId: string, event: string, payload: unknown) {
-    this.server.to(`course:${courseId}`).emit(event, payload);
+    this.server?.to(`course:${courseId}`).emit(event, payload);
   }
 
   emitToUser(userId: string, event: string, payload: unknown) {
-    this.server.to(`user:${userId}`).emit(event, payload);
+    this.server?.to(`user:${userId}`).emit(event, payload);
   }
 }

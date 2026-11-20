@@ -12,6 +12,9 @@ import { CreatePostDto } from './dto/create-post.dto.js';
 import { QueryThreadsDto } from './dto/query-threads.dto.js';
 import { WsGateway } from '../realtime/ws.gateway.js';
 import { Role } from '../user/user.entity.js';
+import { QnaCatalogAccess } from './qna-catalog-access.service.js';
+import { NotificationService } from '../notification/notification.service.js';
+import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
 
 @Injectable()
 export class QnaService {
@@ -21,12 +24,23 @@ export class QnaService {
     @InjectRepository(QnaPost)
     private readonly postRepo: Repository<QnaPost>,
     private readonly wsGateway: WsGateway,
+    private readonly catalogAccess: QnaCatalogAccess,
+    private readonly notificationService: NotificationService,
   ) {}
 
-  async createThread(courseId: string, authorId: string, dto: CreateThreadDto) {
+  async createThread(courseId: string, user: AuthenticatedUser, dto: CreateThreadDto) {
+    await this.catalogAccess.assertCanAccess(courseId, user);
+
+    if (dto.lessonId) {
+      const lesson = await this.catalogAccess.findLesson(dto.lessonId, courseId);
+      if (!lesson) {
+        throw new NotFoundException(`Lesson ${dto.lessonId} not found in this course`);
+      }
+    }
+
     const thread = this.threadRepo.create({
       courseId,
-      authorId,
+      authorId: user.userId,
       title: dto.title,
       lessonId: dto.lessonId ?? null,
     });
@@ -39,7 +53,9 @@ export class QnaService {
     return saved;
   }
 
-  async findThreads(courseId: string, query: QueryThreadsDto) {
+  async findThreads(courseId: string, user: AuthenticatedUser, query: QueryThreadsDto) {
+    await this.catalogAccess.assertCanAccess(courseId, user);
+
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
@@ -68,11 +84,13 @@ export class QnaService {
     };
   }
 
-  async getThreadWithPosts(threadId: string) {
+  async getThreadWithPosts(threadId: string, user: AuthenticatedUser) {
     const thread = await this.threadRepo.findOne({ where: { id: threadId } });
     if (!thread) {
       throw new NotFoundException(`Thread ${threadId} not found`);
     }
+
+    await this.catalogAccess.assertCanAccess(thread.courseId, user);
 
     const posts = await this.postRepo.find({
       where: { threadId },
@@ -82,15 +100,17 @@ export class QnaService {
     return { thread, posts };
   }
 
-  async createPost(threadId: string, authorId: string, dto: CreatePostDto) {
+  async createPost(threadId: string, user: AuthenticatedUser, dto: CreatePostDto) {
     const thread = await this.threadRepo.findOne({ where: { id: threadId } });
     if (!thread) {
       throw new NotFoundException(`Thread ${threadId} not found`);
     }
 
+    await this.catalogAccess.assertCanAccess(thread.courseId, user);
+
     const post = this.postRepo.create({
       threadId,
-      authorId,
+      authorId: user.userId,
       content: dto.content,
     });
     const saved = await this.postRepo.save(post);
@@ -100,20 +120,54 @@ export class QnaService {
       post: saved,
     });
 
+    // Tạo notification cho tác giả thread nếu người trả lời khác tác giả
+    if (thread.authorId !== user.userId) {
+      await this.notificationService.createNotification(
+        thread.authorId,
+        'qna.reply',
+        {
+          threadId: thread.id,
+          courseId: thread.courseId,
+          postId: saved.id,
+          replierId: user.userId,
+        },
+      );
+    }
+
     return saved;
   }
 
-  async resolveThread(threadId: string, user: { userId: string; role: Role }) {
+  async resolveThread(threadId: string, user: AuthenticatedUser) {
     const thread = await this.threadRepo.findOne({ where: { id: threadId } });
     if (!thread) {
       throw new NotFoundException(`Thread ${threadId} not found`);
     }
 
-    if (user.role !== Role.ADMIN && user.userId !== thread.authorId) {
+    const { isOwner } = await this.catalogAccess.assertCanAccess(
+      thread.courseId,
+      user,
+    );
+
+    if (user.role !== Role.ADMIN && !isOwner) {
       throw new ForbiddenException('Only course owner or admin can resolve');
     }
 
     thread.resolved = true;
-    return this.threadRepo.save(thread);
+    const saved = await this.threadRepo.save(thread);
+
+    // Gửi notification cho author thread nếu người resolve là instructor / admin
+    if (thread.authorId !== user.userId) {
+      await this.notificationService.createNotification(
+        thread.authorId,
+        'qna.resolved',
+        {
+          threadId: thread.id,
+          courseId: thread.courseId,
+          resolvedBy: user.userId,
+        },
+      );
+    }
+
+    return saved;
   }
 }

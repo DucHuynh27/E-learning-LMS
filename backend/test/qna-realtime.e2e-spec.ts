@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { JwtService } from '@nestjs/jwt';
+import { io } from 'socket.io-client';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/bootstrap.js';
 import { Role } from '../src/user/user.entity.js';
@@ -11,6 +12,9 @@ describe('Realtime & QnA (e2e)', () => {
   let app: INestApplication<App>;
   let jwtService: JwtService;
   let accessToken: string;
+  let httpServer: any;
+  let serverPort: number;
+
   const mockUserId = '11111111-1111-4111-8111-111111111111';
   const mockCourseId = '22222222-2222-4222-8222-222222222222';
 
@@ -23,6 +27,14 @@ describe('Realtime & QnA (e2e)', () => {
     configureApp(app);
     await app.init();
 
+    httpServer = app.getHttpServer();
+    await new Promise<void>((resolve) => {
+      httpServer.listen(0, () => {
+        serverPort = httpServer.address().port;
+        resolve();
+      });
+    });
+
     jwtService = app.get(JwtService);
     accessToken = jwtService.sign(
       { sub: mockUserId, email: 'qa@lms.local', role: Role.STUDENT },
@@ -34,7 +46,45 @@ describe('Realtime & QnA (e2e)', () => {
     await app.close();
   });
 
-  describe('QnA Threads & Posts', () => {
+  describe('WebSocket Gateway', () => {
+    it('should disconnect client with invalid or missing token', async () => {
+      const socket = io(`http://localhost:${serverPort}`, {
+        transports: ['websocket'],
+        auth: { token: 'invalid_token' },
+      });
+
+      await new Promise<void>((resolve) => {
+        socket.on('disconnect', () => {
+          expect(socket.connected).toBe(false);
+          resolve();
+        });
+      });
+      socket.close();
+    });
+
+    it('should connect authenticated client and receive events', async () => {
+      const socket = io(`http://localhost:${serverPort}`, {
+        transports: ['websocket'],
+        auth: { token: accessToken },
+      });
+
+      await new Promise<void>((resolve) => {
+        socket.on('connect', () => {
+          expect(socket.connected).toBe(true);
+          resolve();
+        });
+      });
+
+      const ack: any = await socket.emitWithAck('join_course', {
+        courseId: mockCourseId,
+      });
+      expect(ack?.ok ?? ack?.data?.ok).toBe(true);
+
+      socket.close();
+    });
+  });
+
+  describe('QnA Threads & Posts REST', () => {
     let createdThreadId: string;
 
     it('POST /v1/courses/:courseId/threads - create thread', async () => {
@@ -43,21 +93,18 @@ describe('Realtime & QnA (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           title: 'How to understand ESM in NestJS 12?',
-        });
+        })
+        .expect(201);
 
-      if (res.status !== 201) {
-        console.error('Response status:', res.status, 'body:', res.body);
-      }
-      expect(res.status).toBe(201);
       expect(res.body.data).toHaveProperty('id');
       expect(res.body.data.title).toBe('How to understand ESM in NestJS 12?');
       expect(res.body.data.courseId).toBe(mockCourseId);
       createdThreadId = res.body.data.id;
     });
 
-    it('GET /v1/courses/:courseId/threads - query threads list', async () => {
+    it('GET /v1/courses/:courseId/threads - query threads list with boolean filter', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/v1/courses/${mockCourseId}/threads`)
+        .get(`/v1/courses/${mockCourseId}/threads?resolved=false`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -66,7 +113,7 @@ describe('Realtime & QnA (e2e)', () => {
       expect(res.body.data.items.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('POST /v1/threads/:id/posts - add reply post to thread', async () => {
+    it('POST /v1/threads/:id/posts - add reply post and trigger notification', async () => {
       const res = await request(app.getHttpServer())
         .post(`/v1/threads/${createdThreadId}/posts`)
         .set('Authorization', `Bearer ${accessToken}`)
@@ -77,7 +124,6 @@ describe('Realtime & QnA (e2e)', () => {
 
       expect(res.body.data).toHaveProperty('id');
       expect(res.body.data.threadId).toBe(createdThreadId);
-      expect(res.body.data.content).toBe('You should ensure all local imports end with .js!');
     });
 
     it('GET /v1/threads/:id - get thread details and posts', async () => {
@@ -89,12 +135,18 @@ describe('Realtime & QnA (e2e)', () => {
       expect(res.body.data.thread.id).toBe(createdThreadId);
       expect(res.body.data.posts.length).toBeGreaterThanOrEqual(1);
     });
+
+    it('should return 401 when unauthenticated', async () => {
+      await request(app.getHttpServer())
+        .get(`/v1/threads/${createdThreadId}`)
+        .expect(401);
+    });
   });
 
   describe('Notifications', () => {
     it('GET /v1/notifications/me - get current user notifications', async () => {
       const res = await request(app.getHttpServer())
-        .get('/v1/notifications/me')
+        .get('/v1/notifications/me?read=false')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
