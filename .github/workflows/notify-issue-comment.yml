@@ -1,0 +1,66 @@
+name: Notify issue comment
+
+# Bắn thông báo tới Discord mỗi khi có comment mới trên issue hoặc pull request.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: read
+  pull-requests: read
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gửi thông báo tới Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          IS_PR: ${{ github.event.issue.pull_request != null }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          COMMENT_AUTHOR_TYPE: ${{ github.event.comment.user.type }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+
+          if [ "$IS_PR" = "true" ]; then
+            kind="Pull Request"
+          else
+            kind="Issue"
+          fi
+
+          # Tài khoản bot (GitHub App / Actions) có type == "Bot" -> đánh dấu 🤖.
+          if [ "$COMMENT_AUTHOR_TYPE" = "Bot" ]; then
+            author="🤖 ${COMMENT_AUTHOR}"
+          else
+            author="${COMMENT_AUTHOR}"
+          fi
+
+          payload=$(jq -n \
+            --arg title "💬 Comment trong ${kind} #${ISSUE_NUMBER}: ${ISSUE_TITLE}" \
+            --arg url "$COMMENT_URL" \
+            --arg author "$author" \
+            --arg kind "$kind" \
+            --arg body "$COMMENT_BODY" \
+            --arg repo "$REPO" \
+            '{
+              embeds: [{
+                title: ($title | if length > 256 then .[:253] + "…" else . end),
+                url: $url,
+                color: 5793266,
+                author: { name: $author },
+                fields: [
+                  { name: "Loại", value: $kind, inline: true },
+                  { name: "Nội dung", value: ($body | if length == 0 then "(trống)" elif length > 1000 then .[:1000] + "…" else . end) }
+                ],
+                footer: { text: $repo },
+                timestamp: (now | todate)
+              }]
+            }')
+
+          curl -sS -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK"
