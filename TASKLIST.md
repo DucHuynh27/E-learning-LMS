@@ -22,7 +22,7 @@ Kế hoạch thực thi E-Learning LMS trong **3 tuần** (mỗi người ~20h/t
 | Handle | Thành viên | Prompt |
 | --- | --- | --- |
 | `@lead` | Huỳnh Kim Đức | [`prompt/lead/`](prompt/lead/AGENTS.md) |
-| `@content` | _(điền tên)_ | [`prompt/dev-content/`](prompt/dev-content/AGENTS.md) |
+| `@content` | Huy | [`prompt/dev-content/`](prompt/dev-content/AGENTS.md) |
 | `@media` | _(điền tên)_ | [`prompt/dev-media/`](prompt/dev-media/AGENTS.md) |
 | `@learning` | _(điền tên)_ | [`prompt/dev-learning/`](prompt/dev-learning/AGENTS.md) |
 | `@qa` | _(điền tên)_ | [`prompt/qa-realtime/`](prompt/qa-realtime/AGENTS.md) |
@@ -61,9 +61,9 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Cross-cutting `main.ts`: ValidationPipe · Serializer/Transform interceptor · ExceptionFilter · versioning — `@lead`
 - [x] AuthModule: login/refresh, argon2, JwtStrategy, RolesGuard, `@Roles`, `@CurrentUser` — `@lead`
 - [x] UsersModule hoàn chỉnh: service + DTO (`findByEmail`/`findByEmailForAuth`) — `@lead`
-- [ ] Entity Course/Section/Lesson + migration — `@content`
-- [ ] CRUD Course/Lesson + phân trang — `@content`
-- [ ] Entity Enrolment + enroll (chỉ khóa PUBLISHED) — `@content`
+- [x] Entity Course/Section/Lesson + migration — `@content` (Huy)
+- [x] CRUD Course/Lesson + phân trang — `@content` (Huy)
+- [x] Entity Enrolment + enroll (chỉ khóa PUBLISHED) — `@content` (Huy)
 - [ ] Test DB riêng cho e2e — skeleton xong (`configureApp`), **DB test riêng chưa** — **(đang làm)** `@qa`
 - [ ] Spike: upload 1 file lên MinIO qua presigned URL — `@media`
 
