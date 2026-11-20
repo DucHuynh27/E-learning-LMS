@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { createObserveModule } from '@nestjs/observe';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -29,7 +29,11 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       // App runtime không cần migrations — chỉ CLI chạy chúng.
       useFactory: () => ({ ...AppDataSource.options, migrations: [] }),
     }),
-    ThrottlerModule.forRoot(throttlerRootOptions()),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => throttlerRootOptions(config),
+    }),
     UserModule,
     AuthModule,
     LearningModule,

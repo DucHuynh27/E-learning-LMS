@@ -53,6 +53,7 @@ Request
 - **`trust proxy` cấu hình được qua `TRUST_PROXY`, mặc định tắt:** chỉ tin `X-Forwarded-For` khi request đến từ proxy thật (số hop, `loopback`, hoặc danh sách IP/CIDR). `EnvVars` **cấm** giá trị `true` trần vì nó cho phép client tự giả IP để né rate limit.
 - **`errorMessage` tùy biến thay vì override guard:** `ThrottlerException` mặc định trả chuỗi `"ThrottlerException: Too Many Requests"`. Đặt `errorMessage: 'Too many requests'` giữ response lỗi sạch, và `AllExceptionsFilter` bọc lại thành cùng shape với mọi lỗi khác.
 - **Ẩn field nhạy cảm bằng hai lớp:** `passwordHash` vừa `select: false` (không kéo hash khỏi DB) vừa `@Exclude()` (nếu entity lỡ lọt ra ngoài ranh giới DTO thì `ClassSerializerInterceptor` vẫn cắt). DTO ở biên (`toPublicUser`) vẫn là lớp chính.
+- **Storage rate limit chọn được qua cấu hình:** mặc định in-memory (một instance, phù hợp dev). Đặt `THROTTLE_STORAGE=redis` + `THROTTLE_REDIS_URL` để nhiều instance dùng chung bộ đếm; `RedisThrottlerStorage` dùng một script Lua (`INCR` + `PEXPIRE`) để tăng/đặt TTL nguyên tử. Nếu Redis không sẵn sàng, storage tạm rơi về in-memory kèm cảnh báo log thay vì làm sập request.
 - **Thứ tự guard toàn cục:** `ThrottlerGuard` (đăng ký ở `AppModule`) chạy **trước** `JwtAuthGuard`/`RolesGuard` (ở `AuthModule`) — guard của module cha chạy trước module nhập. Nhờ vậy request bị 401 vẫn được đếm, không né được rate limit. Có test hồi quy khoá hành vi này.
 
 ## 5. Cơ sở dữ liệu liên quan
@@ -85,6 +86,7 @@ Rate limit (vượt → 429): `login` **5 req/60s theo tài khoản (email)**, `
 
 ## 8. Test
 - **Unit:** `app.controller.spec.ts` (AppController/AppService) · `auth.service.spec.ts` (register/login/refresh + không lộ `passwordHash`) · `user.entity.spec.ts` (serialize cắt `passwordHash`) · `bootstrap.spec.ts` (CORS theo config, `resolveCorsOrigins`, `parseTrustProxy`).
+- **Unit (throttler storage):** `common/throttler-redis.storage.spec.ts` (map kết quả Lua → `ThrottlerStorageRecord`; fallback in-memory khi Redis lỗi; chọn storage theo `THROTTLE_STORAGE`/`THROTTLE_REDIS_URL`).
 - **Integration:** `auth-throttle.integration.spec.ts` (login/register/refresh trả 429 sau ngưỡng; email khác không bị khoá lây) · `common/trust-proxy.integration.spec.ts` (`trust proxy` bật thì đếm riêng theo client, tắt thì bỏ qua `X-Forwarded-For`) · `common/throttler-order.integration.spec.ts` (throttler chạy trước guard 401).
 - **e2e:** smoke `GET /v1` → `{ data: 'Hello World!' }` (dùng `configureApp`).
 - **Smoke thủ công:** register 201 (không lộ hash) · login OK · `/me` có token 200 / không token 401 · validation 400.
@@ -97,7 +99,7 @@ Rate limit (vượt → 429): `login` **5 req/60s theo tài khoản (email)**, `
 
 ## 10. Hạn chế / chưa làm
 - **Chưa có refresh token rotation / lưu refresh token** (nằm trong danh sách **CẮT** của `TASKLIST.md`) → chưa thu hồi được token.
-- **Rate limit dùng storage in-memory** — đủ cho demo một instance; nhiều instance cần storage chia sẻ (Redis) mới đếm đúng trên toàn cụm.
+- **Rate limit mặc định vẫn là storage in-memory** — đủ cho demo một instance. Muốn đếm đúng trên nhiều instance phải đặt `THROTTLE_STORAGE=redis` + `THROTTLE_REDIS_URL`; nếu Redis chết, storage rơi về in-memory (mất tính chia sẻ, vẫn chạy được).
 - **`trust proxy` mặc định tắt** — khi chạy sau proxy mà chưa cấu hình `TRUST_PROXY`, backend vẫn thấy IP của proxy nên các route dùng IP (ngưỡng toàn cục) đếm chung một bucket. Login đã đếm theo tài khoản nên không bị ảnh hưởng; các route khác cần đặt `TRUST_PROXY` đúng.
 - **Rate limit cho route quiz chưa gắn** — việc này đụng controller của `@learning`, đã tách khỏi `feat/auth` (xem ghi chú bàn giao trong `TASKLIST.md`).
 - **Swagger hoãn.**
