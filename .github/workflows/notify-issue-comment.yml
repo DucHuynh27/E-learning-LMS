@@ -20,6 +20,7 @@ jobs:
           REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_ASSIGNEES: ${{ join(github.event.issue.assignees.*.login, ', ') }}
           IS_PR: ${{ github.event.issue.pull_request != null }}
           COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
           COMMENT_AUTHOR_TYPE: ${{ github.event.comment.user.type }}
@@ -41,11 +42,14 @@ jobs:
             author="${COMMENT_AUTHOR}"
           fi
 
+          assignees="${ISSUE_ASSIGNEES:-chưa gán}"
+
           payload=$(jq -n \
             --arg title "💬 Comment trong ${kind} #${ISSUE_NUMBER}: ${ISSUE_TITLE}" \
             --arg url "$COMMENT_URL" \
             --arg author "$author" \
             --arg kind "$kind" \
+            --arg assignees "$assignees" \
             --arg body "$COMMENT_BODY" \
             --arg repo "$REPO" \
             '{
@@ -56,6 +60,7 @@ jobs:
                 author: { name: $author },
                 fields: [
                   { name: "Loại", value: $kind, inline: true },
+                  { name: "Assignee", value: $assignees, inline: true },
                   { name: "Nội dung", value: ($body | if length == 0 then "(trống)" elif length > 1000 then .[:1000] + "…" else . end) }
                 ],
                 footer: { text: $repo },
