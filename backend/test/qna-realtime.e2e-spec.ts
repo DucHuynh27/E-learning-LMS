@@ -7,6 +7,8 @@ import { io } from 'socket.io-client';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/bootstrap.js';
 import { Role } from '../src/user/user.entity.js';
+import { DataSource } from 'typeorm';
+import { NotificationService } from '../src/notification/notification.service.js';
 
 describe('Realtime & QnA (e2e)', () => {
   let app: INestApplication<App>;
@@ -14,9 +16,12 @@ describe('Realtime & QnA (e2e)', () => {
   let accessToken: string;
   let httpServer: any;
   let serverPort: number;
+  let catalogTablesCreated = false;
+  let enrolmentsTableCreated = false;
 
   const mockUserId = '11111111-1111-4111-8111-111111111111';
   const mockCourseId = '22222222-2222-4222-8222-222222222222';
+  const unenrolledCourseId = '33333333-3333-4333-8333-333333333333';
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -35,6 +40,53 @@ describe('Realtime & QnA (e2e)', () => {
       });
     });
 
+    const source = app.get(DataSource);
+    const coursesTable = await source.query(
+      `SELECT to_regclass('public.courses') AS name`,
+    );
+    if (!coursesTable[0]?.name) {
+      await source.query(`
+        CREATE TABLE "courses" (
+          "id" uuid PRIMARY KEY,
+          "instructorId" uuid NOT NULL,
+          "status" varchar(20) NOT NULL
+        )
+      `);
+      catalogTablesCreated = true;
+    }
+    const enrolmentsTable = await source.query(
+      `SELECT to_regclass('public.enrolments') AS name`,
+    );
+    if (!enrolmentsTable[0]?.name) {
+      await source.query(`
+        CREATE TABLE "enrolments" (
+          "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          "userId" uuid NOT NULL,
+          "courseId" uuid NOT NULL,
+          "status" varchar(20) NOT NULL
+        )
+      `);
+      enrolmentsTableCreated = true;
+    }
+
+    await source.query(
+      `INSERT INTO "courses" ("id", "instructorId", "status")
+       VALUES ($1, $2, 'PUBLISHED')
+       ON CONFLICT ("id") DO UPDATE SET "status" = EXCLUDED."status"`,
+      [mockCourseId, mockUserId],
+    );
+    await source.query(
+      `INSERT INTO "enrolments" ("userId", "courseId", "status")
+       VALUES ($1, $2, 'ACTIVE')`,
+      [mockUserId, mockCourseId],
+    );
+    await source.query(
+      `INSERT INTO "courses" ("id", "instructorId", "status")
+       VALUES ($1, $2, 'PUBLISHED')
+       ON CONFLICT ("id") DO UPDATE SET "status" = EXCLUDED."status"`,
+      [unenrolledCourseId, '44444444-4444-4444-8444-444444444444'],
+    );
+
     jwtService = app.get(JwtService);
     accessToken = jwtService.sign(
       { sub: mockUserId, email: 'qa@lms.local', role: Role.STUDENT },
@@ -43,6 +95,30 @@ describe('Realtime & QnA (e2e)', () => {
   });
 
   afterAll(async () => {
+    const source = app.get(DataSource);
+    await source.query(`DELETE FROM "notifications" WHERE "userId" = $1`, [
+      mockUserId,
+    ]);
+    await source.query(`DELETE FROM "qna_posts" WHERE "authorId" = $1`, [
+      mockUserId,
+    ]);
+    await source.query(`DELETE FROM "qna_threads" WHERE "authorId" = $1`, [
+      mockUserId,
+    ]);
+    await source.query(
+      `DELETE FROM "enrolments" WHERE "userId" = $1 AND "courseId" = $2`,
+      [mockUserId, mockCourseId],
+    );
+    await source.query(`DELETE FROM "courses" WHERE "id" = $1`, [mockCourseId]);
+    await source.query(`DELETE FROM "courses" WHERE "id" = $1`, [
+      unenrolledCourseId,
+    ]);
+    if (enrolmentsTableCreated) {
+      await source.query(`DROP TABLE IF EXISTS "enrolments"`);
+    }
+    if (catalogTablesCreated) {
+      await source.query(`DROP TABLE IF EXISTS "courses"`);
+    }
     await app.close();
   });
 
@@ -82,12 +158,44 @@ describe('Realtime & QnA (e2e)', () => {
 
       socket.close();
     });
+
+    it('should reject joining a course without enrollment', async () => {
+      const socket = io(`http://localhost:${serverPort}`, {
+        transports: ['websocket'],
+        auth: { token: accessToken },
+      });
+      await new Promise<void>((resolve) => {
+        socket.on('connect', () => resolve());
+      });
+
+      const ack: any = await socket.emitWithAck('join_course', {
+        courseId: unenrolledCourseId,
+      });
+      expect(ack?.ok ?? ack?.data?.ok).toBe(false);
+      expect(ack?.error ?? ack?.data?.error).toContain('Forbidden');
+      socket.close();
+    });
   });
 
   describe('QnA Threads & Posts REST', () => {
     let createdThreadId: string;
 
     it('POST /v1/courses/:courseId/threads - create thread', async () => {
+      const socket = io(`http://localhost:${serverPort}`, {
+        transports: ['websocket'],
+        auth: { token: accessToken },
+      });
+      await new Promise<void>((resolve) => {
+        socket.on('connect', () => resolve());
+      });
+      const joinAck: any = await socket.emitWithAck('join_course', {
+        courseId: mockCourseId,
+      });
+      expect(joinAck?.ok ?? joinAck?.data?.ok).toBe(true);
+      const eventPromise = new Promise<any>((resolve) => {
+        socket.once('qna.thread.created', resolve);
+      });
+
       const res = await request(app.getHttpServer())
         .post(`/v1/courses/${mockCourseId}/threads`)
         .set('Authorization', `Bearer ${accessToken}`)
@@ -102,6 +210,12 @@ describe('Realtime & QnA (e2e)', () => {
       expect(res.body.data).not.toHaveProperty('authorId');
       expect(res.body.data).not.toHaveProperty('posts');
       createdThreadId = res.body.data.id;
+
+      const event = await eventPromise;
+      expect(event.thread).toEqual(res.body.data);
+      expect(event.thread).not.toHaveProperty('authorId');
+      expect(event.thread).not.toHaveProperty('posts');
+      socket.close();
     });
 
     it('GET /v1/courses/:courseId/threads - query threads list with boolean filter', async () => {
@@ -126,6 +240,18 @@ describe('Realtime & QnA (e2e)', () => {
     });
 
     it('POST /v1/threads/:id/posts - add reply post and trigger notification', async () => {
+      const socket = io(`http://localhost:${serverPort}`, {
+        transports: ['websocket'],
+        auth: { token: accessToken },
+      });
+      await new Promise<void>((resolve) => {
+        socket.on('connect', () => resolve());
+      });
+      await socket.emitWithAck('join_course', { courseId: mockCourseId });
+      const eventPromise = new Promise<any>((resolve) => {
+        socket.once('qna.post.created', resolve);
+      });
+
       const res = await request(app.getHttpServer())
         .post(`/v1/threads/${createdThreadId}/posts`)
         .set('Authorization', `Bearer ${accessToken}`)
@@ -138,6 +264,13 @@ describe('Realtime & QnA (e2e)', () => {
       expect(res.body.data.threadId).toBe(createdThreadId);
       expect(res.body.data).not.toHaveProperty('authorId');
       expect(res.body.data).not.toHaveProperty('thread');
+
+      const event = await eventPromise;
+      expect(event.threadId).toBe(createdThreadId);
+      expect(event.post).toEqual(res.body.data);
+      expect(event.post).not.toHaveProperty('authorId');
+      expect(event.post).not.toHaveProperty('thread');
+      socket.close();
     });
 
     it('GET /v1/threads/:id - get thread details and posts', async () => {
@@ -186,6 +319,48 @@ describe('Realtime & QnA (e2e)', () => {
         expect(JSON.stringify(notification.payload)).not.toContain('authorId');
         expect(JSON.stringify(notification.payload)).not.toContain('userId');
       }
+    });
+
+    it('emits notification DTO without userId or nested identity fields', async () => {
+      const socket = io(`http://localhost:${serverPort}`, {
+        transports: ['websocket'],
+        auth: { token: accessToken },
+      });
+      await new Promise<void>((resolve) => {
+        socket.on('connect', () => resolve());
+      });
+
+      const eventPromise = new Promise<any>((resolve) => {
+        socket.once('notification.created', resolve);
+      });
+
+      const notificationService = app.get(NotificationService);
+      await notificationService.createNotification(mockUserId, 'qna.reply', {
+        threadId: '11111111-aaaa-4111-8111-aaaaaaaaaaaa',
+        courseId: mockCourseId,
+        postId: '22222222-bbbb-4222-8222-bbbbbbbbbbbb',
+        replierId: 'private-replier-id',
+        nested: {
+          authorId: 'private-author-id',
+          userId: 'private-user-id',
+        },
+      });
+
+      const event = await eventPromise;
+      expect(event.notification).not.toHaveProperty('userId');
+      expect(event.notification).toHaveProperty('id');
+      expect(event.notification).toHaveProperty('type');
+      expect(event.notification).toHaveProperty('payload');
+      expect(JSON.stringify(event.notification.payload)).not.toContain(
+        'replierId',
+      );
+      expect(JSON.stringify(event.notification.payload)).not.toContain(
+        'authorId',
+      );
+      expect(JSON.stringify(event.notification.payload)).not.toContain(
+        'userId',
+      );
+      socket.close();
     });
   });
 });

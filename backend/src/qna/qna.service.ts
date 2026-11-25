@@ -62,7 +62,7 @@ export class QnaService {
     const saved = await this.threadRepo.save(thread);
 
     this.wsGateway.emitToCourse(courseId, 'qna.thread.created', {
-      thread: saved,
+      thread: toThreadResponseDto(saved),
     });
 
     return toThreadResponseDto(saved);
@@ -143,7 +143,7 @@ export class QnaService {
 
     this.wsGateway.emitToCourse(thread.courseId, 'qna.post.created', {
       threadId,
-      post: saved,
+      post: toPostResponseDto(saved),
     });
 
     // Tạo notification cho tác giả thread nếu người trả lời khác tác giả
