@@ -16,7 +16,7 @@ Mục đích: mỗi người viết **một file giải thích module mình ph�
 | [`catalog.md`](catalog.md) | @content | Courses/Sections/Lessons/Enrolments | ⬜ |
 | [`media.md`](media.md) | @media | Uploads/Media/Bull/S3 | ⬜ |
 | [`learning.md`](learning.md) | @learning | Progress/Certificates/Quizzes/Attempts/Health | Đã viết; chờ tích hợp và QA |
-| [`qa-realtime.md`](qa-realtime.md) | @qa | QnA/Notifications/WsGateway + e2e | ⬜ |
+| [`qa-realtime.md`](qa-realtime.md) | @qa | QnA/Notifications/WsGateway + e2e | **(đang làm)** architecture/contract thay vì tài liệu stub |
 
 ## Hợp đồng API (spec)
 
