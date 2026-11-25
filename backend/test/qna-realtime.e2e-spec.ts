@@ -48,6 +48,8 @@ describe('Realtime & QnA (e2e)', () => {
       await source.query(`
         CREATE TABLE "courses" (
           "id" uuid PRIMARY KEY,
+          "title" varchar(200) NOT NULL,
+          "slug" varchar(255) NOT NULL,
           "instructorId" uuid NOT NULL,
           "status" varchar(20) NOT NULL
         )
@@ -63,26 +65,41 @@ describe('Realtime & QnA (e2e)', () => {
           "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           "userId" uuid NOT NULL,
           "courseId" uuid NOT NULL,
-          "status" varchar(20) NOT NULL
+          "status" varchar(20) NOT NULL,
+          UNIQUE ("userId", "courseId")
         )
       `);
       enrolmentsTableCreated = true;
     }
 
+    // Schema Catalog thật có FK courses.instructorId -> users(id): phải seed user trước.
     await source.query(
-      `INSERT INTO "courses" ("id", "instructorId", "status")
-       VALUES ($1, $2, 'PUBLISHED')
+      `INSERT INTO "users" ("id", "email", "passwordHash", "fullName", "role")
+       VALUES ($1, $2, 'x', 'QA User', 'STUDENT'),
+              ($3, $4, 'x', 'Other Instructor', 'INSTRUCTOR')
+       ON CONFLICT ("id") DO NOTHING`,
+      [
+        mockUserId,
+        'qa@lms.local',
+        '44444444-4444-4444-8444-444444444444',
+        'other@lms.local',
+      ],
+    );
+    await source.query(
+      `INSERT INTO "courses" ("id", "title", "slug", "instructorId", "status")
+       VALUES ($1, 'QA Course', 'qa-course-1', $2, 'PUBLISHED')
        ON CONFLICT ("id") DO UPDATE SET "status" = EXCLUDED."status"`,
       [mockCourseId, mockUserId],
     );
     await source.query(
       `INSERT INTO "enrolments" ("userId", "courseId", "status")
-       VALUES ($1, $2, 'ACTIVE')`,
+       VALUES ($1, $2, 'ACTIVE')
+       ON CONFLICT ("userId", "courseId") DO NOTHING`,
       [mockUserId, mockCourseId],
     );
     await source.query(
-      `INSERT INTO "courses" ("id", "instructorId", "status")
-       VALUES ($1, $2, 'PUBLISHED')
+      `INSERT INTO "courses" ("id", "title", "slug", "instructorId", "status")
+       VALUES ($1, 'Other Course', 'qa-course-2', $2, 'PUBLISHED')
        ON CONFLICT ("id") DO UPDATE SET "status" = EXCLUDED."status"`,
       [unenrolledCourseId, '44444444-4444-4444-8444-444444444444'],
     );
