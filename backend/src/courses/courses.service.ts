@@ -3,7 +3,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -23,7 +22,6 @@ import { toSectionResponse } from '../sections/dto/section.response.js';
 import { slugify } from './slug.util.js';
 import { Role } from '../user/user.entity.js';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
-import { PublishedLessonCache } from '../learning/published-lesson-cache.service.js';
 
 @Injectable()
 export class CoursesService {
@@ -34,8 +32,6 @@ export class CoursesService {
     private readonly sectionRepo: Repository<Section>,
     @InjectRepository(Lesson)
     private readonly lessonRepo: Repository<Lesson>,
-    @Optional()
-    private readonly publishedCache?: PublishedLessonCache,
   ) {}
 
   async create(
@@ -201,7 +197,6 @@ export class CoursesService {
     this.assertCourseOwner(course, user);
 
     await this.courseRepo.remove(course);
-    await this.publishedCache?.invalidate(id);
   }
 
   async publish(id: string, user: AuthenticatedUser): Promise<CourseResponse> {
@@ -232,7 +227,6 @@ export class CoursesService {
 
     course.status = CourseStatus.PUBLISHED;
     const saved = await this.courseRepo.save(course);
-    await this.publishedCache?.invalidate(id);
     return toCourseResponse(saved);
   }
 
@@ -249,7 +243,6 @@ export class CoursesService {
 
     course.status = CourseStatus.DRAFT;
     const saved = await this.courseRepo.save(course);
-    await this.publishedCache?.invalidate(id);
     return toCourseResponse(saved);
   }
 

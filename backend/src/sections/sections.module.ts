@@ -4,10 +4,9 @@ import { Section } from './section.entity.js';
 import { Course } from '../courses/course.entity.js';
 import { SectionsService } from './sections.service.js';
 import { SectionsController } from './sections.controller.js';
-import { LearningModule } from '../learning/learning.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Section, Course]), LearningModule],
+  imports: [TypeOrmModule.forFeature([Section, Course])],
   controllers: [SectionsController],
   providers: [SectionsService],
   exports: [SectionsService],

@@ -89,7 +89,9 @@ export class AttemptsService {
         quizId: quiz.id,
       });
       if (count >= MAX_QUIZ_ATTEMPTS)
-        throw new ConflictException('Maximum of 3 quiz attempts reached');
+        throw new ConflictException(
+          `Maximum of ${MAX_QUIZ_ATTEMPTS} quiz attempts reached`,
+        );
       const [{ now }] = await manager.query<{ now: Date }[]>(
         'SELECT clock_timestamp() AS "now"',
       );
@@ -159,15 +161,13 @@ export class AttemptsService {
           answer.optionId?.toLowerCase() ?? null,
         ]),
       );
-      await manager
-        .getRepository(QuizAnswer)
-        .insert(
-          questions.map((question) => ({
-            attemptId: attempt.id,
-            questionId: question.id,
-            optionId: answers.get(question.id) ?? null,
-          })),
-        );
+      await manager.getRepository(QuizAnswer).insert(
+        questions.map((question) => ({
+          attemptId: attempt.id,
+          questionId: question.id,
+          optionId: answers.get(question.id) ?? null,
+        })),
+      );
       const passed = score >= quiz.passScore;
       await repository.update(attempt.id, { score, passed, submittedAt: now });
       return { attemptId: attempt.id, score, passed, submittedAt: now };

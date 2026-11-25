@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { getStorageToken } from '@nestjs/throttler';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -21,7 +22,7 @@ import { LearningModule } from './learning.module.js';
 import {
   createHttpTestDatabase,
   destroyHttpTestDatabase,
-} from './testing/http-test-database.js';
+} from '../../test-support/http-test-database.js';
 
 @Module({})
 class HttpTestDatabaseModule {
@@ -40,7 +41,7 @@ interface Actor {
   token: string;
 }
 
-describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
+describe(
   'Learning HTTP module integration (Catalog fixtures)',
   () => {
     let source: DataSource;
@@ -99,6 +100,18 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       })
         .overrideProvider(HealthService)
         .useValue({ check: health })
+        // Test này kiểm chứng nghiệp vụ, không phải rate limit. ThrottlerGuard được kéo
+        // vào qua AuthModule; thay storage bằng bản không bao giờ block để các vòng lặp
+        // submit không chạm ngưỡng quiz (không đụng code production).
+        .overrideProvider(getStorageToken())
+        .useValue({
+          increment: async () => ({
+            totalHits: 1,
+            timeToExpire: 60,
+            isBlocked: false,
+            timeToBlockExpire: 0,
+          }),
+        })
         .compile();
       app = module.createNestApplication();
       configureApp(app);
@@ -144,10 +157,12 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
         courseId,
       ]);
       for (const [position, id] of lessons.entries())
-        await source.query(
-          'INSERT INTO "lessons" VALUES ($1, $2, $3, 100, $4)',
-          [id, sectionId, position, position < 2],
-        );
+        await source.query('INSERT INTO "lessons" VALUES ($1, $2, $3, 100, $4)', [
+          id,
+          sectionId,
+          position,
+          position < 2,
+        ]);
       await source.query(
         'INSERT INTO "enrolments" ("userId", "courseId") VALUES ($1, $2)',
         [student.id, courseId],
@@ -198,9 +213,9 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
         .set('Authorization', bearer(outsider))
         .send({ watchedSec: 90 })
         .expect(403);
-      expect(
-        await source.query('SELECT * FROM "lesson_progress"'),
-      ).toHaveLength(0);
+      expect(await source.query('SELECT * FROM "lesson_progress"')).toHaveLength(
+        0,
+      );
     });
 
     it('returns the canonical envelope and validates progress bodies and path UUIDs', async () => {
@@ -294,18 +309,12 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       );
       const path = `/v1/lessons/${lessons[0]}/quiz`;
       await server().get(path).expect(401);
-      await server()
-        .get(path)
-        .set('Authorization', bearer(student))
-        .expect(404);
+      await server().get(path).set('Authorization', bearer(student)).expect(404);
       await server()
         .get(path)
         .set('Authorization', bearer(otherTeacher))
         .expect(404);
-      await server()
-        .get(path)
-        .set('Authorization', bearer(teacher))
-        .expect(200);
+      await server().get(path).set('Authorization', bearer(teacher)).expect(200);
       await server().get(path).set('Authorization', bearer(admin)).expect(200);
     });
 
@@ -322,15 +331,14 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       const persisted = await source.getRepository(QuizAttempt).findOneByOrFail({
         id: response.body.data.attemptId,
       });
-      expect(response.body.data.startedAt).toBe(persisted.startedAt.toISOString());
+      expect(response.body.data.startedAt).toBe(
+        persisted.startedAt.toISOString(),
+      );
       expect(Date.parse(response.body.data.expiresAt)).toBe(
         persisted.startedAt.getTime() + 60000,
       );
       expect(JSON.stringify(response.body)).not.toContain('isCorrect');
-      await server()
-        .post(path)
-        .set('Authorization', bearer(student))
-        .expect(409);
+      await server().post(path).set('Authorization', bearer(student)).expect(409);
     });
 
     it('rejects forged results, duplicate question IDs, foreign options and other attempt owners', async () => {
@@ -369,9 +377,7 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
           ],
         })
         .expect(400);
-      expect(await source.query('SELECT * FROM "quiz_answers"')).toHaveLength(
-        0,
-      );
+      expect(await source.query('SELECT * FROM "quiz_answers"')).toHaveLength(0);
     });
 
     it('returns a server-graded result once and freezes the question set', async () => {
@@ -473,7 +479,12 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
       const lookup = await server()
         .get(`/v1/certificates/${certificate.serialNo}`)
         .expect(200);
-      expect(lookup.body.data).toEqual(certificate);
+      expect(lookup.body.data).toEqual({
+        serialNo: certificate.serialNo,
+        courseId,
+        issuedAt: certificate.issuedAt,
+      });
+      expect(lookup.body.data).not.toHaveProperty('userId');
       const html = await server()
         .get(`/v1/certificates/${certificate.serialNo}/verify`)
         .expect(200)
@@ -483,6 +494,8 @@ describe.runIf(process.env.LEARNING_DB_TESTS === '1')(
         "frame-ancestors 'none'",
       );
       expect(html.text).not.toContain('passwordHash');
+      expect(html.text).not.toContain(student.id);
+      expect(html.text).not.toContain('Mã học viên');
       await server().get('/v1/certificates/missing').expect(404);
     });
 

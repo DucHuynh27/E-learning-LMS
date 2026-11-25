@@ -1,0 +1,85 @@
+name: Notify pull request
+
+# Bắn thông báo tới Discord khi PR mở/đóng/merge, sẵn sàng review, hoặc được yêu cầu review.
+on:
+  pull_request:
+    types: [opened, closed, ready_for_review, review_requested]
+
+permissions:
+  pull-requests: read
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gửi thông báo tới Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          ACTION: ${{ github.event.action }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_HEAD: ${{ github.event.pull_request.head.ref }}
+          PR_BASE: ${{ github.event.pull_request.base.ref }}
+          PR_FILES: ${{ github.event.pull_request.changed_files }}
+          PR_ADDITIONS: ${{ github.event.pull_request.additions }}
+          PR_DELETIONS: ${{ github.event.pull_request.deletions }}
+          PR_ASSIGNEES: ${{ join(github.event.pull_request.assignees.*.login, ', ') }}
+          PR_REVIEWERS: ${{ join(github.event.pull_request.requested_reviewers.*.login, ', ') }}
+        run: |
+          set -euo pipefail
+
+          # Nhãn + màu theo sự kiện. "closed" tách merge / đóng thường.
+          case "$ACTION" in
+            opened)            label="🟢 PR mới";            color=5763719 ;;   # 0x57F287
+            ready_for_review)  label="🟢 PR sẵn sàng review"; color=5763719 ;;
+            review_requested)  label="👀 Yêu cầu review";     color=16705372 ;;  # 0xFEE75C
+            closed)
+              if [ "$PR_MERGED" = "true" ]; then
+                label="🟣 PR đã merge"; color=9000933                            # 0x8957E5
+              else
+                label="🔴 PR đã đóng"; color=15548997                            # 0xED4245
+              fi ;;
+            *)                 label="🔔 PR cập nhật";         color=5793266 ;;
+          esac
+
+          add="${PR_ADDITIONS:-0}"
+          del="${PR_DELETIONS:-0}"
+          files="${PR_FILES:-0}"
+          assignees="${PR_ASSIGNEES:-chưa gán}"
+          reviewers="${PR_REVIEWERS:-—}"
+
+          payload=$(jq -n \
+            --arg title "${label} #${PR_NUMBER}: ${PR_TITLE}" \
+            --arg url "$PR_URL" \
+            --arg author "$PR_AUTHOR" \
+            --arg label "$label" \
+            --arg branch "${PR_HEAD:-?} → ${PR_BASE:-?}" \
+            --arg changes "+${add} / -${del} · ${files} file" \
+            --arg assignees "$assignees" \
+            --arg reviewers "$reviewers" \
+            --arg repo "$REPO" \
+            --argjson color "$color" \
+            '{
+              embeds: [{
+                title: ($title | if length > 256 then .[:253] + "…" else . end),
+                url: $url,
+                color: $color,
+                author: { name: ("@" + $author) },
+                fields: [
+                  { name: "Sự kiện", value: $label, inline: true },
+                  { name: "Nhánh", value: $branch, inline: true },
+                  { name: "Thay đổi", value: $changes, inline: true },
+                  { name: "Assignee", value: $assignees, inline: true },
+                  { name: "Reviewer", value: $reviewers, inline: true }
+                ],
+                footer: { text: $repo },
+                timestamp: (now | todate)
+              }]
+            }')
+
+          curl -sS -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK"

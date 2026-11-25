@@ -2,7 +2,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,7 +12,6 @@ import { UpdateLessonDto } from './dto/update-lesson.dto.js';
 import { LessonResponse, toLessonResponse } from './dto/lesson.response.js';
 import { Role } from '../user/user.entity.js';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
-import { PublishedLessonCache } from '../learning/published-lesson-cache.service.js';
 
 @Injectable()
 export class LessonsService {
@@ -22,8 +20,6 @@ export class LessonsService {
     private readonly lessonRepo: Repository<Lesson>,
     @InjectRepository(Section)
     private readonly sectionRepo: Repository<Section>,
-    @Optional()
-    private readonly publishedCache?: PublishedLessonCache,
   ) {}
 
   async create(
@@ -61,11 +57,6 @@ export class LessonsService {
     });
 
     const saved = await this.lessonRepo.save(lesson);
-
-    if (saved.isPublished) {
-      await this.publishedCache?.invalidate(section.courseId);
-    }
-
     return toLessonResponse(saved);
   }
 
@@ -92,8 +83,6 @@ export class LessonsService {
     if (dto.isPublished !== undefined) lesson.isPublished = dto.isPublished;
 
     const saved = await this.lessonRepo.save(lesson);
-    await this.publishedCache?.invalidate(lesson.section.courseId);
-
     return toLessonResponse(saved);
   }
 
@@ -109,9 +98,7 @@ export class LessonsService {
 
     this.assertOwner(lesson.section.course.instructorId, user);
 
-    const courseId = lesson.section.courseId;
     await this.lessonRepo.remove(lesson);
-    await this.publishedCache?.invalidate(courseId);
   }
 
   private assertOwner(instructorId: string, user: AuthenticatedUser): void {

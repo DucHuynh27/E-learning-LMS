@@ -23,8 +23,6 @@ Module Catalog & Enrolment chịu trách nhiệm quản lý toàn bộ nội dun
    ▼
 [Service] ──► Kiểm tra quyền sở hữu (ownership), logic publish/enroll, tính slug, quản lý position
    │
-   ├──► [PublishedLessonCache] ──► Invalidate cache Redis khi publish/unpublish/sửa lesson
-   │
    ▼
 [TypeORM Repository] ──► PostgreSQL (courses, sections, lessons, enrolments)
    │
@@ -44,7 +42,7 @@ Module Catalog & Enrolment chịu trách nhiệm quản lý toàn bộ nội dun
 | `sections/sections.service.ts` | Thêm, sửa, xóa section, tính toán auto-position |
 | `sections/sections.controller.ts` | Endpoints section (`/v1/courses/:courseId/sections`, `/v1/sections/:id`) |
 | `lessons/lesson.entity.ts` | Entity `Lesson`: bài học (VIDEO, ARTICLE, QUIZ), durationSec, isPublished |
-| `lessons/lessons.service.ts` | Thêm, sửa, xóa lesson, kích hoạt invalidate cache cho module Learning |
+| `lessons/lessons.service.ts` | Thêm, sửa, xóa lesson, kiểm tra quyền sở hữu và tự động tính position |
 | `lessons/lessons.controller.ts` | Endpoints lesson (`/v1/sections/:sectionId/lessons`, `/v1/lessons/:id`) |
 | `enrolments/enrolment.entity.ts` | Entity `Enrolment`: ghi nhận học viên đăng ký khóa học, tiến độ hoàn thành |
 | `enrolments/enrolments.service.ts` | Đăng ký khóa học, kiểm tra điều kiện PUBLISHED, tra cứu enrolment cá nhân và theo khóa |
@@ -64,8 +62,8 @@ Module Catalog & Enrolment chịu trách nhiệm quản lý toàn bộ nội dun
   - Khóa học ở trạng thái `DRAFT` là nội dung đang soạn thảo bởi giảng viên, chưa hoàn thiện về cấu trúc và bài học. Việc chặn ghi danh ở mức API (trả về HTTP 409 Conflict) đảm bảo học viên không truy cập vào nội dung dở dang.
 - **Điều kiện tiên quyết để `publish` khóa học:**
   - Khóa học phải có ít nhất **1 section** và ít nhất **1 lesson**. Nếu vi phạm, hệ thống từ chối publish với lỗi 409 Conflict. Điều này tránh việc người dùng thấy các khóa học "rỗng" trên trang chủ.
-- **Tích hợp Invalidation Cache với `LearningModule`:**
-  - `PublishedLessonCache` trong module Learning cache số lượng lesson published trên Redis để tối ưu tính toán phần trăm tiến độ. Khi Catalog thay đổi cấu trúc bài học (thêm, sửa trạng thái publish, xóa bài học), `PublishedLessonCache.invalidate(courseId)` được tự động gọi để làm mới cache ngay lập tức.
+- **Tách biệt hoàn toàn (Decoupling) với `LearningModule`:**
+  - Module Catalog quản lý nguồn dữ liệu gốc (`courses`, `sections`, `lessons`, `enrolments`) trong PostgreSQL. Module `Learning` truy vấn trực tiếp bảng của Catalog để tổng hợp số bài published khi cần, đảm bảo kiến trúc Modular Monolith độc lập, không tạo phụ thuộc vòng.
 
 ## 5. Cơ sở dữ liệu liên quan
 
@@ -114,9 +112,9 @@ Module Catalog & Enrolment chịu trách nhiệm quản lý toàn bộ nội dun
   - `slug.util.spec.ts`: Kiểm tra chuẩn hóa tiếng Việt, ký tự đặc biệt, fallback khi chuỗi rỗng.
   - `courses.service.spec.ts`: Kiểm tra tạo khóa học, sinh slug duy nhất, cập nhật phân quyền, publish có điều kiện, unpublish, xóa.
   - `sections.service.spec.ts`: Kiểm tra tính toán vị trí tự động, kiểm tra quyền sở hữu của instructor, cập nhật, xóa.
-  - `lessons.service.spec.ts`: Kiểm tra tạo bài học, cập nhật thông tin, kích hoạt dọn dẹp cache.
+  - `lessons.service.spec.ts`: Kiểm tra tạo bài học, tính vị trí mặc định, cập nhật và xóa đúng quyền sở hữu.
   - `enrolments.service.spec.ts`: Kiểm tra ghi danh thành công, chặn ghi danh khi khóa chưa mở hoặc đã ghi danh, phân trang danh sách ghi danh.
-- Tất cả **63 unit tests** đều vượt qua (100% pass), `oxlint` không có cảnh báo hay lỗi.
+- Chạy `pnpm test:unit`: **92/92 unit tests** (trong đó có **33 unit tests** của module Content) vượt qua; `pnpm lint` (oxlint) không có cảnh báo hay lỗi; `pnpm build` thành công.
 
 ## 9. Điểm nhấn kỹ thuật
 1. **Quản lý phân cấp toàn vẹn dữ liệu ở tầng cơ sở dữ liệu:** Tận dụng triệt để constraint của PostgreSQL (Foreign Key Cascade, Composite Unique, Check Constraints) kết hợp với TypeORM decorator giúp hệ thống ngăn chặn dữ liệu sai lệch ngay từ tầng lưu trữ.

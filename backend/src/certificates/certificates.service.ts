@@ -2,7 +2,10 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { DataSource, EntityManager } from 'typeorm';
 import { Certificate } from './certificate.entity.js';
-import { CertificateResponse } from '../learning/learning.responses.js';
+import {
+  CertificateResponse,
+  PublicCertificateResponse,
+} from '../learning/learning.responses.js';
 
 @Injectable()
 export class CertificatesService {
@@ -22,22 +25,20 @@ export class CertificatesService {
   }
 
   async mine(userId: string): Promise<CertificateResponse[]> {
-    const certificates = await this.source
-      .getRepository(Certificate)
-      .find({
-        where: { userId },
-        order: { issuedAt: 'DESC', serialNo: 'ASC' },
-      });
+    const certificates = await this.source.getRepository(Certificate).find({
+      where: { userId },
+      order: { issuedAt: 'DESC', serialNo: 'ASC' },
+    });
     return certificates.map(
       (certificate) => new CertificateResponse(certificate),
     );
   }
 
-  async lookup(serialNo: string): Promise<CertificateResponse> {
+  async lookup(serialNo: string): Promise<PublicCertificateResponse> {
     const certificate = await this.source
       .getRepository(Certificate)
       .findOneBy({ serialNo });
     if (!certificate) throw new NotFoundException('Certificate not found');
-    return new CertificateResponse(certificate);
+    return new PublicCertificateResponse(certificate);
   }
 }

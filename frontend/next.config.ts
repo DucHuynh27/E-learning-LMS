@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
-const backend = (process.env.LMS_API_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
+const backend = (process.env.LMS_API_URL ?? "http://127.0.0.1:3002").replace(
+  /\/$/,
+  "",
+);
 
 const nextConfig: NextConfig = {
   experimental: { agentFeedback: true },

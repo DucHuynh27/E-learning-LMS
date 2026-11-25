@@ -2,7 +2,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,7 +12,6 @@ import { UpdateSectionDto } from './dto/update-section.dto.js';
 import { SectionResponse, toSectionResponse } from './dto/section.response.js';
 import { Role } from '../user/user.entity.js';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
-import { PublishedLessonCache } from '../learning/published-lesson-cache.service.js';
 
 @Injectable()
 export class SectionsService {
@@ -22,8 +20,6 @@ export class SectionsService {
     private readonly sectionRepo: Repository<Section>,
     @InjectRepository(Course)
     private readonly courseRepo: Repository<Course>,
-    @Optional()
-    private readonly publishedCache?: PublishedLessonCache,
   ) {}
 
   async create(
@@ -92,9 +88,7 @@ export class SectionsService {
 
     this.assertOwner(section.course.instructorId, user);
 
-    const courseId = section.courseId;
     await this.sectionRepo.remove(section);
-    await this.publishedCache?.invalidate(courseId);
   }
 
   private assertOwner(instructorId: string, user: AuthenticatedUser): void {

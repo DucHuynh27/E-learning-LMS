@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LearningDashboard } from "@/components/learning-dashboard";
-import styles from "./learning.module.css";
+import styles from "@/components/learning-dashboard.module.css";
 
 export const metadata: Metadata = {
   title: "Learning Space · E-Learning LMS",
