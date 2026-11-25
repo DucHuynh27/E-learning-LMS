@@ -24,7 +24,9 @@ export class S3Service implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly config: ConfigService) {
     this.bucket = this.config.getOrThrow<string>('MINIO_BUCKET');
-    this.presignedTtl = this.config.getOrThrow<number>('MINIO_PRESIGNED_TTL');
+    this.presignedTtl = Number(
+      this.config.getOrThrow<number>('MINIO_PRESIGNED_TTL'),
+    );
     this.client = new S3Client({
       endpoint: this.config.getOrThrow<string>('MINIO_ENDPOINT'),
       region: this.config.getOrThrow<string>('MINIO_REGION'),

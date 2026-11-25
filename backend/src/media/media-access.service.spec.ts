@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import type { DataSource } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
 import { Role } from '../user/user.entity.js';
@@ -103,5 +107,81 @@ describe('MediaAccessService', () => {
         owner,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('allows ADMIN to manage any VIDEO lesson and throws 404 when missing', async () => {
+    const admin: AuthenticatedUser = {
+      userId: '11111111-1111-4111-8111-111111111111',
+      email: 'admin@example.test',
+      role: Role.ADMIN,
+    };
+    query
+      .mockResolvedValueOnce([
+        {
+          id: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+          type: 'VIDEO',
+          isPublished: false,
+          courseStatus: 'DRAFT',
+          instructorId: owner.userId,
+          courseId: '5df221d4-a89d-4608-bf1a-1827ba21c036',
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    await expect(
+      service.assertCanManageLesson(
+        'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        admin,
+      ),
+    ).resolves.toBeUndefined();
+
+    await expect(
+      service.assertCanManageLesson(
+        'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        admin,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('allows an enrolled student to play a published video lesson', async () => {
+    query
+      .mockResolvedValueOnce([
+        {
+          id: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+          type: 'VIDEO',
+          isPublished: true,
+          courseStatus: 'PUBLISHED',
+          instructorId: owner.userId,
+          courseId: '5df221d4-a89d-4608-bf1a-1827ba21c036',
+        },
+      ])
+      .mockResolvedValueOnce([{ id: 'enrolment-1' }]);
+
+    await expect(
+      service.assertCanPlayVideo(
+        'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        student,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it('rejects playback when lesson or course is unpublished', async () => {
+    query.mockResolvedValue([
+      {
+        id: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        type: 'VIDEO',
+        isPublished: false,
+        courseStatus: 'PUBLISHED',
+        instructorId: owner.userId,
+        courseId: '5df221d4-a89d-4608-bf1a-1827ba21c036',
+      },
+    ]);
+
+    await expect(
+      service.assertCanPlayVideo(
+        'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        student,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

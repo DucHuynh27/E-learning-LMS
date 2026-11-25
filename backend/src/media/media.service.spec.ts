@@ -1,3 +1,4 @@
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import type { Queue } from 'bullmq';
 import { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
@@ -128,5 +129,138 @@ describe('MediaService', () => {
     );
 
     expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it('rejects upload-url when video is already processing or ready', async () => {
+    videos.findOneBy.mockResolvedValue({
+      id: '2ec420f3-b3f0-4bfc-a0d9-19161352a713',
+      lessonId: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      status: VideoStatus.READY,
+    });
+
+    await expect(
+      service.createUploadUrl(
+        'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        { contentType: 'video/mp4' },
+        user,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects confirmUpload with 409 when video is already ready', async () => {
+    const video = {
+      id: '2ec420f3-b3f0-4bfc-a0d9-19161352a713',
+      lessonId: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      originalKey: 'videos/lesson/original',
+      status: VideoStatus.READY,
+    };
+    videos.findOneBy.mockResolvedValue(video);
+
+    await expect(
+      service.confirmUpload(
+        video.lessonId,
+        { key: video.originalKey },
+        user,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects confirmUpload when key does not match the initialized upload', async () => {
+    videos.findOneBy.mockResolvedValue({
+      id: '2ec420f3-b3f0-4bfc-a0d9-19161352a713',
+      lessonId: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      originalKey: 'videos/lesson/original',
+      status: VideoStatus.PENDING,
+    });
+
+    await expect(
+      service.confirmUpload(
+        'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        { key: 'videos/lesson/other' },
+        user,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('retries failed BullMQ job when confirming a failed video', async () => {
+    const retry = vi.fn();
+    const video = {
+      id: '2ec420f3-b3f0-4bfc-a0d9-19161352a713',
+      lessonId: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      originalKey: 'videos/lesson/original',
+      status: VideoStatus.FAILED,
+      error: 'Previous error',
+    };
+    videos.findOneBy.mockResolvedValue(video);
+    queue.getJob.mockResolvedValue({
+      getState: vi.fn().mockResolvedValue('failed'),
+      retry,
+    });
+
+    await service.confirmUpload(
+      video.lessonId,
+      { key: video.originalKey },
+      user,
+    );
+
+    expect(retry).toHaveBeenCalledWith('failed');
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it('returns video metadata without originalKey', async () => {
+    videos.findOneBy.mockResolvedValue({
+      id: '2ec420f3-b3f0-4bfc-a0d9-19161352a713',
+      lessonId: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      originalKey: 'videos/lesson/original',
+      thumbnailKey: 'videos/2ec4/thumbnail.jpg',
+      durationSec: 42,
+      status: VideoStatus.READY,
+      error: null,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      updatedAt: new Date('2026-01-01T00:00:00Z'),
+    });
+
+    const result = await service.getByLesson(
+      'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+    );
+
+    expect(result).not.toHaveProperty('originalKey');
+    expect(result.thumbnailKey).toBe('videos/2ec4/thumbnail.jpg');
+  });
+
+  it('returns presigned playback URL when video is ready and user has access', async () => {
+    videos.findOneBy.mockResolvedValue({
+      id: '2ec420f3-b3f0-4bfc-a0d9-19161352a713',
+      lessonId: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      originalKey: 'videos/lesson/original',
+      status: VideoStatus.READY,
+    });
+
+    const result = await service.createPlaybackUrl(
+      '2ec420f3-b3f0-4bfc-a0d9-19161352a713',
+      user,
+    );
+
+    expect(access.assertCanPlayVideo).toHaveBeenCalledWith(
+      'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      user,
+    );
+    expect(result).toEqual({ url: 'https://minio/play', expiresInSec: 900 });
+  });
+
+  it('rejects playback when video is not ready or missing', async () => {
+    videos.findOneBy.mockResolvedValueOnce(null);
+    await expect(
+      service.createPlaybackUrl('2ec420f3-b3f0-4bfc-a0d9-19161352a713', user),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    videos.findOneBy.mockResolvedValueOnce({
+      id: '2ec420f3-b3f0-4bfc-a0d9-19161352a713',
+      lessonId: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      status: VideoStatus.PROCESSING,
+    });
+    await expect(
+      service.createPlaybackUrl('2ec420f3-b3f0-4bfc-a0d9-19161352a713', user),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 });

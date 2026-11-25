@@ -88,7 +88,9 @@ export class MediaService {
     if (dto.key !== video.originalKey) {
       throw new ConflictException('Upload key does not match this lesson');
     }
-    if (video.status === VideoStatus.READY) return this.toResponse(video);
+    if (video.status === VideoStatus.READY) {
+      throw new ConflictException('Video is already ready');
+    }
 
     await this.storage.assertObjectExists(video.originalKey);
     video.status = VideoStatus.PROCESSING;

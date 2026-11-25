@@ -9,7 +9,9 @@ import {
   Post,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
+import { Role } from '../user/user.entity.js';
 import { ConfirmUploadDto } from './dto/confirm-upload.dto.js';
 import { UploadUrlDto } from './dto/upload-url.dto.js';
 import { MediaService } from './media.service.js';
@@ -19,6 +21,7 @@ export class MediaController {
   constructor(private readonly media: MediaService) {}
 
   @Post('lessons/:lessonId/video/upload-url')
+  @Roles(Role.INSTRUCTOR, Role.ADMIN)
   @HttpCode(HttpStatus.OK)
   createUploadUrl(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
@@ -29,6 +32,7 @@ export class MediaController {
   }
 
   @Post('lessons/:lessonId/video/confirm')
+  @Roles(Role.INSTRUCTOR, Role.ADMIN)
   @HttpCode(HttpStatus.ACCEPTED)
   confirmUpload(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
