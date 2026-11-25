@@ -17,6 +17,10 @@ import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface
 import { CreateThreadDto } from './dto/create-thread.dto.js';
 import { CreatePostDto } from './dto/create-post.dto.js';
 import { QueryThreadsDto } from './dto/query-threads.dto.js';
+import {
+  PostResponseDto,
+  ThreadResponseDto,
+} from '../common/dto/realtime-responses.dto.js';
 
 export const QNA_THREAD_THROTTLE = { ttl: 60_000, limit: 10 } as const;
 export const QNA_POST_THROTTLE = { ttl: 60_000, limit: 20 } as const;
@@ -32,7 +36,7 @@ export class QnaController {
     @Param('courseId', ParseUUIDPipe) courseId: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateThreadDto,
-  ) {
+  ): Promise<ThreadResponseDto> {
     return this.qnaService.createThread(courseId, user, dto);
   }
 
@@ -59,7 +63,7 @@ export class QnaController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreatePostDto,
-  ) {
+  ): Promise<PostResponseDto> {
     return this.qnaService.createPost(id, user, dto);
   }
 
@@ -67,7 +71,7 @@ export class QnaController {
   resolveThread(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
-  ) {
+  ): Promise<ThreadResponseDto> {
     return this.qnaService.resolveThread(id, user);
   }
 }

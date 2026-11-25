@@ -99,6 +99,8 @@ describe('Realtime & QnA (e2e)', () => {
       expect(res.body.data).toHaveProperty('id');
       expect(res.body.data.title).toBe('How to understand ESM in NestJS 12?');
       expect(res.body.data.courseId).toBe(mockCourseId);
+      expect(res.body.data).not.toHaveProperty('authorId');
+      expect(res.body.data).not.toHaveProperty('posts');
       createdThreadId = res.body.data.id;
     });
 
@@ -111,6 +113,16 @@ describe('Realtime & QnA (e2e)', () => {
       expect(res.body.data).toHaveProperty('items');
       expect(Array.isArray(res.body.data.items)).toBe(true);
       expect(res.body.data.items.length).toBeGreaterThanOrEqual(1);
+      for (const thread of res.body.data.items) {
+        expect(thread).not.toHaveProperty('authorId');
+        expect(thread).not.toHaveProperty('posts');
+        expect(thread).toHaveProperty('id');
+        expect(thread).toHaveProperty('courseId');
+        expect(thread).toHaveProperty('lessonId');
+        expect(thread).toHaveProperty('title');
+        expect(thread).toHaveProperty('resolved');
+        expect(thread).toHaveProperty('createdAt');
+      }
     });
 
     it('POST /v1/threads/:id/posts - add reply post and trigger notification', async () => {
@@ -124,6 +136,8 @@ describe('Realtime & QnA (e2e)', () => {
 
       expect(res.body.data).toHaveProperty('id');
       expect(res.body.data.threadId).toBe(createdThreadId);
+      expect(res.body.data).not.toHaveProperty('authorId');
+      expect(res.body.data).not.toHaveProperty('thread');
     });
 
     it('GET /v1/threads/:id - get thread details and posts', async () => {
@@ -134,6 +148,12 @@ describe('Realtime & QnA (e2e)', () => {
 
       expect(res.body.data.thread.id).toBe(createdThreadId);
       expect(res.body.data.posts.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.data.thread).not.toHaveProperty('authorId');
+      for (const post of res.body.data.posts) {
+        expect(post).not.toHaveProperty('authorId');
+        expect(post).not.toHaveProperty('thread');
+        expect(post.threadId).toBe(createdThreadId);
+      }
     });
 
     it('should return 401 when unauthenticated', async () => {
@@ -152,6 +172,20 @@ describe('Realtime & QnA (e2e)', () => {
 
       expect(res.body.data).toHaveProperty('items');
       expect(Array.isArray(res.body.data.items)).toBe(true);
+      for (const notification of res.body.data.items) {
+        expect(notification).not.toHaveProperty('userId');
+        expect(notification).toHaveProperty('id');
+        expect(notification).toHaveProperty('type');
+        expect(notification).toHaveProperty('payload');
+        expect(notification).toHaveProperty('read');
+        expect(notification).toHaveProperty('createdAt');
+        expect(JSON.stringify(notification.payload)).not.toContain('replierId');
+        expect(JSON.stringify(notification.payload)).not.toContain(
+          'resolvedBy',
+        );
+        expect(JSON.stringify(notification.payload)).not.toContain('authorId');
+        expect(JSON.stringify(notification.payload)).not.toContain('userId');
+      }
     });
   });
 });

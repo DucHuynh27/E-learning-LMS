@@ -15,6 +15,12 @@ import { Role } from '../user/user.entity.js';
 import { QnaCatalogAccess } from './qna-catalog-access.service.js';
 import { NotificationService } from '../notification/notification.service.js';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
+import {
+  PostResponseDto,
+  ThreadResponseDto,
+  toPostResponseDto,
+  toThreadResponseDto,
+} from '../common/dto/realtime-responses.dto.js';
 
 @Injectable()
 export class QnaService {
@@ -28,13 +34,22 @@ export class QnaService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  async createThread(courseId: string, user: AuthenticatedUser, dto: CreateThreadDto) {
+  async createThread(
+    courseId: string,
+    user: AuthenticatedUser,
+    dto: CreateThreadDto,
+  ): Promise<ThreadResponseDto> {
     await this.catalogAccess.assertCanAccess(courseId, user);
 
     if (dto.lessonId) {
-      const lesson = await this.catalogAccess.findLesson(dto.lessonId, courseId);
+      const lesson = await this.catalogAccess.findLesson(
+        dto.lessonId,
+        courseId,
+      );
       if (!lesson) {
-        throw new NotFoundException(`Lesson ${dto.lessonId} not found in this course`);
+        throw new NotFoundException(
+          `Lesson ${dto.lessonId} not found in this course`,
+        );
       }
     }
 
@@ -50,10 +65,14 @@ export class QnaService {
       thread: saved,
     });
 
-    return saved;
+    return toThreadResponseDto(saved);
   }
 
-  async findThreads(courseId: string, user: AuthenticatedUser, query: QueryThreadsDto) {
+  async findThreads(
+    courseId: string,
+    user: AuthenticatedUser,
+    query: QueryThreadsDto,
+  ) {
     await this.catalogAccess.assertCanAccess(courseId, user);
 
     const page = query.page ?? 1;
@@ -74,7 +93,7 @@ export class QnaService {
     const [items, total] = await qb.getManyAndCount();
 
     return {
-      items,
+      items: items.map((item) => toThreadResponseDto(item)),
       meta: {
         page,
         limit,
@@ -97,10 +116,17 @@ export class QnaService {
       order: { createdAt: 'ASC' },
     });
 
-    return { thread, posts };
+    return {
+      thread: toThreadResponseDto(thread),
+      posts: posts.map((post) => toPostResponseDto(post)),
+    };
   }
 
-  async createPost(threadId: string, user: AuthenticatedUser, dto: CreatePostDto) {
+  async createPost(
+    threadId: string,
+    user: AuthenticatedUser,
+    dto: CreatePostDto,
+  ): Promise<PostResponseDto> {
     const thread = await this.threadRepo.findOne({ where: { id: threadId } });
     if (!thread) {
       throw new NotFoundException(`Thread ${threadId} not found`);
@@ -134,10 +160,13 @@ export class QnaService {
       );
     }
 
-    return saved;
+    return toPostResponseDto(saved);
   }
 
-  async resolveThread(threadId: string, user: AuthenticatedUser) {
+  async resolveThread(
+    threadId: string,
+    user: AuthenticatedUser,
+  ): Promise<ThreadResponseDto> {
     const thread = await this.threadRepo.findOne({ where: { id: threadId } });
     if (!thread) {
       throw new NotFoundException(`Thread ${threadId} not found`);
@@ -168,6 +197,6 @@ export class QnaService {
       );
     }
 
-    return saved;
+    return toThreadResponseDto(saved);
   }
 }

@@ -8,6 +8,10 @@ import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity.js';
 import { QueryNotificationsDto } from './dto/query-notifications.dto.js';
 import { WsGateway } from '../realtime/ws.gateway.js';
+import {
+  NotificationResponseDto,
+  toNotificationResponseDto,
+} from '../common/dto/realtime-responses.dto.js';
 
 @Injectable()
 export class NotificationService {
@@ -21,7 +25,7 @@ export class NotificationService {
     userId: string,
     type: string,
     payload: Record<string, unknown>,
-  ) {
+  ): Promise<NotificationResponseDto> {
     const notif = this.notifRepo.create({
       userId,
       type,
@@ -33,7 +37,7 @@ export class NotificationService {
       notification: saved,
     });
 
-    return saved;
+    return toNotificationResponseDto(saved);
   }
 
   async getMyNotifications(userId: string, query: QueryNotificationsDto) {
@@ -55,7 +59,7 @@ export class NotificationService {
     const [items, total] = await qb.getManyAndCount();
 
     return {
-      items,
+      items: items.map((item) => toNotificationResponseDto(item)),
       meta: {
         page,
         limit,
@@ -65,7 +69,10 @@ export class NotificationService {
     };
   }
 
-  async markAsRead(notificationId: string, userId: string) {
+  async markAsRead(
+    notificationId: string,
+    userId: string,
+  ): Promise<NotificationResponseDto> {
     const notif = await this.notifRepo.findOne({
       where: { id: notificationId },
     });
@@ -80,6 +87,7 @@ export class NotificationService {
     }
 
     notif.read = true;
-    return this.notifRepo.save(notif);
+    const saved = await this.notifRepo.save(notif);
+    return toNotificationResponseDto(saved);
   }
 }
