@@ -43,6 +43,9 @@ export class AnonymousIpThrottleGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    if (context.getType() !== 'http') {
+      return true;
+    }
     const { ttl, limit } = this.options ?? ANONYMOUS_IP_THROTTLE;
     const request = context.switchToHttp().getRequest<RequestWithIp>();
     const key = `anonymous-ip:${request.ip ?? 'unknown'}`;

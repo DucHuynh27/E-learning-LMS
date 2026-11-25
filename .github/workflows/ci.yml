@@ -67,6 +67,8 @@ jobs:
       - name: Bật hạ tầng
         # e2e hiện chỉ cần Postgres. Sẽ bổ sung redis/minio khi test cần dùng.
         run: docker compose up -d --wait --wait-timeout 90 postgres
+      - name: Chạy migrations cho database E2E
+        run: pnpm migration:run
       - run: pnpm test:e2e
 
   frontend:
