@@ -46,8 +46,17 @@ Phạm vi theo [`TASKLIST.md`](TASKLIST.md): không triển khai HLS đa bitrate
 | 2. Media Pipeline               | Upload MinIO → BullMQ → thumbnail            | Đậu Xuân Quang (@media) |
 | 3. Progress & Certificate       | % hoàn thành + chứng chỉ record và tra cứu  | Phạm Ngọc Minh Quân (@learning) |
 | 4. Quiz                         | Thi, chấm điểm, giới hạn lượt/thời gian      | Phạm Ngọc Minh Quân (@learning) |
-| 5. Realtime Q&A & Notifications | Socket.io, room theo course                  | Bùi Trần Hoàn Mỹ (@qa) |
+| 5. Realtime Q&A & Notifications | Socket.io, room theo course — **100% implementation**, đang chờ review/CI/merge PR | Bùi Trần Hoàn Mỹ (@qa) |
 | 6. Hardening                    | Rate limit, caching, observability, e2e      | Cả nhóm        |
+
+## Tiến độ hiện tại
+
+| Hạng mục | Trạng thái | Tiến độ |
+| --- | --- | --- |
+| Realtime & Q&A | WebSocket, room theo course, thread/post, notification và migration đã triển khai | 100% implementation |
+| Response DTO / Serializer (Issue #51) | Đã map QnA/Notification sang DTO; loại bỏ `authorId`, `userId` và identity field khỏi payload lồng nhau | 100% implementation |
+| Kiểm tra realtime | Backend build/lint xanh; unit test 63/63; E2E 9/9 xanh | 100% local verification |
+| PR #61 | Đang mở trên `main`, chờ CI cuối cùng và approving review; chưa merge | Chưa hoàn tất quy trình release |
 
 ## Quy ước làm việc
 
