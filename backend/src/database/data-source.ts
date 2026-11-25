@@ -4,6 +4,9 @@ import { join } from 'node:path';
 import { LEARNING_ENTITIES } from '../learning/learning.entities.js';
 import { CONTENT_ENTITIES } from '../courses/content.entities.js';
 import { User } from '../user/user.entity.js'; // import tường minh, tránh glob-ESM
+import { QnaThread } from '../qna/entities/qna-thread.entity.js';
+import { QnaPost } from '../qna/entities/qna-post.entity.js';
+import { Notification } from '../notification/entities/notification.entity.js';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -12,7 +15,14 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [User, ...LEARNING_ENTITIES, ...CONTENT_ENTITIES],
+  entities: [
+    User,
+    ...LEARNING_ENTITIES,
+    ...CONTENT_ENTITIES,
+    QnaThread,
+    QnaPost,
+    Notification,
+  ],
   migrations: [join(import.meta.dirname, 'migrations', '*.{ts,js}')],
   synchronize: false, // KHÔNG bao giờ true
 });
