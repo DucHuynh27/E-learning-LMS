@@ -41,6 +41,12 @@ describe('S3Service', () => {
     expect(send).toHaveBeenCalledTimes(2);
   });
 
+  it('does not crash onModuleInit when MinIO is unreachable', async () => {
+    send.mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:9000'));
+
+    await expect(service.onModuleInit()).resolves.toBeUndefined();
+  });
+
   it('throws NotFoundException when uploaded object does not exist', async () => {
     send.mockRejectedValueOnce({ $metadata: { httpStatusCode: 404 } });
 

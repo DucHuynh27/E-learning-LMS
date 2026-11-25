@@ -9,6 +9,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleDestroy,
   OnModuleInit,
@@ -20,7 +21,9 @@ import { Readable } from 'node:stream';
 export class S3Service implements OnModuleInit, OnModuleDestroy {
   readonly bucket: string;
   readonly presignedTtl: number;
+  private readonly logger = new Logger(S3Service.name);
   private readonly client: S3Client;
+  private bucketReady = false;
 
   constructor(private readonly config: ConfigService) {
     this.bucket = this.config.getOrThrow<string>('MINIO_BUCKET');
@@ -42,6 +45,17 @@ export class S3Service implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     try {
+      await this.ensureBucket();
+    } catch (error) {
+      // Cho phép app khởi động khi MinIO chưa chạy (ví dụ CI e2e chỉ bật Postgres).
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`MinIO chưa sẵn sàng khi khởi động: ${message}`);
+    }
+  }
+
+  private async ensureBucket(): Promise<void> {
+    if (this.bucketReady) return;
+    try {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
     } catch (error) {
       const status = (error as { $metadata?: { httpStatusCode?: number } })
@@ -49,13 +63,15 @@ export class S3Service implements OnModuleInit, OnModuleDestroy {
       if (status !== 404) throw error;
       await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
     }
+    this.bucketReady = true;
   }
 
   onModuleDestroy(): void {
     this.client.destroy();
   }
 
-  createUploadUrl(key: string, contentType: string) {
+  async createUploadUrl(key: string, contentType: string) {
+    await this.ensureBucket();
     return getSignedUrl(
       this.client,
       new PutObjectCommand({
