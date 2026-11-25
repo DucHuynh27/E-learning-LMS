@@ -102,7 +102,7 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 **Exit criteria:** đạt 100% phát chứng chỉ (record + trang tra cứu) · Q&A realtime tối thiểu · demo chạy end-to-end.
 
 - [x] Certificate: entity + tự phát khi học đủ mọi lesson published (idempotent) + JSON/HTML tra cứu, unit/integration — `@learning`
-- [ ] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa`
+- [x] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa` (PR #61)
 - [x] HealthModule (Postgres/Redis/MinIO): implementation + wiring + unit/probe local — `@learning`
 - [x] PostgreSQL health probe dùng chung query đang chờ, giữ hạn response 1 giây và phục hồi sau kết quả muộn; ba regression concurrency/timeout — `@learning`
 - [x] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
@@ -133,3 +133,5 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - Frontend chấm nhẹ hơn → giữ ở mức đủ demo, không đầu tư quá tay.
 
 > Cập nhật **2026-11-20**: điền tên thành viên vào bảng handle (Content = Nguyễn Đức Phương Huy, Media = Đậu Xuân Quang, Learning = Phạm Ngọc Minh Quân, QA/Realtime = Bùi Trần Hoàn Mỹ). Đánh dấu hoàn tất phần `@lead`: Hardening (auth #28, rate limit quiz #36, lớp IP trước auth #31, Redis throttler storage #56 — đã merge `main`) và xác nhận required checks của `main` (`lint-and-test`, `e2e`, `frontend`); các issue review #11/#12/#18/#27 và #30–#39 đã đóng.
+
+> Cập nhật **2026-11-25**: Q&A realtime (`@qa`) đã merge `main` qua PR #61 — entity `QnaThread`/`QnaPost`, Notifications, `WsGateway` (room theo course + auth handshake), API thread/post, e2e có test WebSocket và bước chạy migration. Toàn bộ 15 issue review **#41–#55** đã đóng. Catalog/Enrolment (`@content`) đã merge qua PR #62; còn lại Media (PR #60, đang review) và #88 (FK/cascade Learning↔Catalog).
