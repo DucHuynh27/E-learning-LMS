@@ -32,12 +32,13 @@ export class NotificationService {
       payload,
     });
     const saved = await this.notifRepo.save(notif);
+    const response = toNotificationResponseDto(saved);
 
     this.wsGateway.emitToUser(userId, 'notification.created', {
-      notification: saved,
+      notification: response,
     });
 
-    return toNotificationResponseDto(saved);
+    return response;
   }
 
   async getMyNotifications(userId: string, query: QueryNotificationsDto) {

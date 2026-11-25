@@ -10,7 +10,12 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface.js';
 import { QnaCatalogAccess } from '../qna/qna-catalog-access.service.js';
@@ -87,13 +92,23 @@ export class WsGateway implements OnGatewayConnection {
       return { ok: false, error: 'courseId is required' };
     }
 
-    const { canAccess } = await this.catalogAccess.checkAccess(
-      data.courseId,
-      client.user,
-    );
+    try {
+      const { canAccess } = await this.catalogAccess.checkAccess(
+        data.courseId,
+        client.user,
+      );
 
-    if (!canAccess) {
-      return { ok: false, error: 'Forbidden: not enrolled or instructor' };
+      if (!canAccess) {
+        return { ok: false, error: 'Forbidden: not enrolled or instructor' };
+      }
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return { ok: false, error: 'Course not found' };
+      }
+      if (error instanceof ServiceUnavailableException) {
+        return { ok: false, error: 'Course access could not be verified' };
+      }
+      return { ok: false, error: 'Course access could not be verified' };
     }
 
     await client.join(`course:${data.courseId}`);

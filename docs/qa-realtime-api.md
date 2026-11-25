@@ -68,6 +68,11 @@ NotificationResponse { id, type, payload, read, createdAt }
 
 `authorId` và `userId` chỉ dùng nội bộ. Không được trả chúng ở REST hoặc WebSocket payload; payload notification không được chứa các identity field `authorId`, `userId`, `replierId`, `resolvedBy`.
 
+WebSocket thread/post/notification emit cùng response DTO với REST. Catalog access phải fail closed:
+- Course không tồn tại → 404.
+- Chưa enroll hoặc không phải chủ khoá → 403.
+- Thiếu bảng/schema catalog hoặc database không thể xác minh quyền truy cập → 503/service unavailable.
+
 ## 8. Mã lỗi
 | Mã | Khi nào |
 | --- | --- |

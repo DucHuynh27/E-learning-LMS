@@ -17,8 +17,9 @@
 ## Trạng thái hiện tại
 
 - DONE: entity/migration; REST thread/post/notification; DTO REST và kiểm tra JSON cơ bản; handshake JWT; join course; E2E happy-path.
-- NEED REVIEW: payload WebSocket `qna.thread.created`, `qna.post.created`, `notification.created` vẫn nhận entity thô; cần mapper DTO dùng chung trước khi kết luận Issue #51 hoàn tất.
-- PARTIAL: E2E chưa phủ đủ join course trái quyền, student resolve, 404/403, notification ownership ngoài API hiện tại, broadcast event và cleanup/test DB riêng.
+- DONE (bằng test): payload WebSocket `qna.thread.created`, `qna.post.created`, `notification.created` đã dùng Thread/Post/Notification response DTO; không lộ `authorId`/`userId` hoặc identity field lồng nhau.
+- DONE (bằng test): catalog access fail closed khi bảng/schema/catalog lỗi; course missing trả 404; student chưa enroll bị từ chối; enrollment access đúng.
+- PARTIAL: E2E chưa phủ đủ student resolve, notification ownership ngoài API hiện tại, broadcast toàn bộ room và cleanup/test DB riêng.
 
 ## Chiến lược test
 
