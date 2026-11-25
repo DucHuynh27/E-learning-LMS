@@ -102,7 +102,8 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 **Exit criteria:** đạt 100% phát chứng chỉ (record + trang tra cứu) · Q&A realtime tối thiểu · demo chạy end-to-end.
 
 - [x] Certificate: entity + tự phát khi học đủ mọi lesson published (idempotent) + JSON/HTML tra cứu, unit/integration — `@learning`
-- [x] Q&A: entity QnaThread/QnaPost + WsGateway (room theo course, auth handshake) — `@qa` (PR #61)
+- [x] Q&A: entity QnaThread/QnaPost, migration, REST controller/service, DTO/serializer response và WsGateway (handshake JWT, room theo course) — `@qa` (PR #61)
+- [ ] Cứng hoá và nghiệm thu Q&A realtime: chuẩn hoá lỗi catalog → 503, revalidate khi enrollment bị thu hồi, và ma trận test negative/ownership — **(đang làm)** `@qa`
 - [x] HealthModule (Postgres/Redis/MinIO): implementation + wiring + unit/probe local — `@learning`
 - [x] PostgreSQL health probe dùng chung query đang chờ, giữ hạn response 1 giây và phục hồi sau kết quả muộn; ba regression concurrency/timeout — `@learning`
 - [x] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
@@ -111,10 +112,14 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
   - [x] Ẩn field nhạy cảm: `@Exclude` `passwordHash` + test — `@lead`
   - [x] Rate limit route quiz: đọc 30 / start 10 / submit 5 req/60s, đếm theo tài khoản — `@lead` + `@learning` (cần `@learning` review)
 - [ ] e2e toàn hệ + script demo — `@qa`
+  - [x] Happy-path realtime: connect/socket join, tạo thread/post, thread details, notification REST và response JSON không lộ `authorId`/`userId` — `@qa`
+  - [ ] Ma trận từ chối: chưa enroll, join course trái quyền, student resolve, thread/notification không tồn tại và notification của người khác — `@qa`
+  - [ ] Chứng minh cleanup/reset database test và test DB riêng thay vì dùng database chung; migrations đã chạy trước E2E — `@qa`
 - [x] Demo Learning riêng: seed/start backend port 3002 và frontend Next.js port 3100, kết nối Auth/Progress/Quiz/Certificate — `@learning`
 - [ ] Mỗi người: viết `docs/<module>.md` giải thích kiến trúc module mình — **cả nhóm**
   - [x] Phần Learning: `docs/learning.md`, cập nhật `docs/learning-api.md` và hướng dẫn chạy `frontend/README.md` — `@learning`
   - [x] Phần Auth: cập nhật `docs/auth.md` (hardening CORS/rate limit/serialize) — `@lead`
+  - [ ] Phần Realtime: thay stub `docs/qa-realtime.md` bằng tài liệu kiến trúc/test cụ thể và cập nhật response/WS contract — **(đang làm)** `@qa`
 - [x] Push origin + bật branch protection — `@lead`
 
 > Cập nhật **2026-11-19** (branch `feat/auth`): hoàn tất phần hardening thuộc `@lead` — CORS (`configureApp` + `CORS_ORIGIN`), rate limit (throttler toàn cục; `login` 5 theo tài khoản, `register` 10, `refresh` 20), `trust proxy` cấu hình qua `TRUST_PROXY` (mặc định tắt), ẩn `passwordHash` (`@Exclude`). Kiểm tra local: `pnpm lint` sạch, **54 test** (unit + integration throttler/trust-proxy/guard-order) qua, `pnpm build` qua, **1 e2e nền tảng** qua. Xử lý các issue review #30–#35 (đã xác minh guard order đúng, chỉ thêm test hồi quy).

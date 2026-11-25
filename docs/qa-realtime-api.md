@@ -61,10 +61,12 @@ REST áp dụng [quy ước chung của Catalog](catalog-api.md#1-quy-ước-chu
 
 ## 7. Response shapes
 ```
-ThreadResponse       { id, courseId, lessonId, authorId, title, resolved, createdAt }
-PostResponse         { id, threadId, authorId, content, createdAt }
+ThreadResponse       { id, courseId, lessonId, title, resolved, createdAt }
+PostResponse         { id, threadId, content, createdAt }
 NotificationResponse { id, type, payload, read, createdAt }
 ```
+
+`authorId` và `userId` chỉ dùng nội bộ. Không được trả chúng ở REST hoặc WebSocket payload; payload notification không được chứa các identity field `authorId`, `userId`, `replierId`, `resolvedBy`.
 
 ## 8. Mã lỗi
 | Mã | Khi nào |
