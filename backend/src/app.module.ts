@@ -9,6 +9,10 @@ import { validateEnv } from './config/env.validation.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UserModule } from './user/user.module.js';
 import { LearningModule } from './learning/learning.module.js';
+import { CoursesModule } from './courses/courses.module.js';
+import { SectionsModule } from './sections/sections.module.js';
+import { LessonsModule } from './lessons/lessons.module.js';
+import { EnrolmentsModule } from './enrolments/enrolments.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { QnaModule } from './qna/qna.module.js';
 import { NotificationModule } from './notification/notification.module.js';
@@ -32,6 +36,10 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     UserModule,
     AuthModule,
     LearningModule,
+    CoursesModule,
+    SectionsModule,
+    LessonsModule,
+    EnrolmentsModule,
     RealtimeModule,
     QnaModule,
     NotificationModule,

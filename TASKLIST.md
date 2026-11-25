@@ -61,9 +61,9 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Cross-cutting `main.ts`: ValidationPipe · Serializer/Transform interceptor · ExceptionFilter · versioning — `@lead`
 - [x] AuthModule: login/refresh, argon2, JwtStrategy, RolesGuard, `@Roles`, `@CurrentUser` — `@lead`
 - [x] UsersModule hoàn chỉnh: service + DTO (`findByEmail`/`findByEmailForAuth`) — `@lead`
-- [ ] Entity Course/Section/Lesson + migration — `@content`
-- [ ] CRUD Course/Lesson + phân trang — `@content`
-- [ ] Entity Enrolment + enroll (chỉ khóa PUBLISHED) — `@content`
+- [x] Entity Course/Section/Lesson + migration — `@content` (Huy)
+- [x] CRUD Course/Lesson + phân trang — `@content` (Huy)
+- [x] Entity Enrolment + enroll (chỉ khóa PUBLISHED) — `@content` (Huy)
 - [ ] Test DB riêng cho e2e — skeleton xong (`configureApp`), **DB test riêng chưa** — **(đang làm)** `@qa`
 - [ ] Spike: upload 1 file lên MinIO qua presigned URL — `@media`
 

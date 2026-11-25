@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { join } from 'node:path';
 import { LEARNING_ENTITIES } from '../learning/learning.entities.js';
+import { CONTENT_ENTITIES } from '../courses/content.entities.js';
 import { User } from '../user/user.entity.js'; // import tường minh, tránh glob-ESM
 import { QnaThread } from '../qna/entities/qna-thread.entity.js';
 import { QnaPost } from '../qna/entities/qna-post.entity.js';
@@ -17,6 +18,7 @@ export const AppDataSource = new DataSource({
   entities: [
     User,
     ...LEARNING_ENTITIES,
+    ...CONTENT_ENTITIES,
     QnaThread,
     QnaPost,
     Notification,
