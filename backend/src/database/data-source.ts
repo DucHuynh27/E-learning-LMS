@@ -7,6 +7,7 @@ import { User } from '../user/user.entity.js'; // import tường minh, tránh g
 import { QnaThread } from '../qna/entities/qna-thread.entity.js';
 import { QnaPost } from '../qna/entities/qna-post.entity.js';
 import { Notification } from '../notification/entities/notification.entity.js';
+import { Video } from '../media/video.entity.js';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -22,6 +23,7 @@ export const AppDataSource = new DataSource({
     QnaThread,
     QnaPost,
     Notification,
+    Video,
   ],
   migrations: [join(import.meta.dirname, 'migrations', '*.{ts,js}')],
   synchronize: false, // KHÔNG bao giờ true
