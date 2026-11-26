@@ -49,7 +49,8 @@ Request
 
 - **CORS trong `configureApp`, không ở `main.ts`:** để e2e dùng đúng cấu hình thật. Origin lấy từ `CORS_ORIGIN` (danh sách phân tách dấu phẩy); để trống thì dùng mặc định dev. `credentials: true` kèm danh sách origin tường minh (không dùng `*`) để không vi phạm ràng buộc của trình duyệt.
 - **Rate limit bằng `@nestjs/throttler`, ngưỡng gom một chỗ:** mặc định toàn API 100 req/60s; `login` 5, `register` 10, `refresh` 20 req/60s. Hằng số nằm ở `src/common/throttling.ts` để runtime và test dùng chung, tránh lệch số.
-- **Login đếm theo tài khoản, không chỉ IP:** `loginTracker` key theo `req.body.email` (fallback IP). Vì frontend proxy server-side (Next rewrite) nên backend không thấy IP client; key theo email vừa chặn dò mật khẩu phân tán nhiều IP vào cùng account, vừa không khoá lây người dùng chung NAT.
+- **Login đếm theo email + IP:** `loginTracker` key `${email}:${ip}` (fallback IP khi thiếu email). Vẫn chặn dò mật khẩu vào một account từ cùng một IP, nhưng **không cho một IP khoá đăng nhập của chủ tài khoản từ IP khác** (chống lockout DoS). Spam phân tán nhiều IP vẫn bị ngưỡng toàn cục theo IP chặn.
+- **JWT verify đối chiếu user hiện tại:** `JwtStrategy.validate` tra `UsersService.findById` mỗi request — token còn hạn nhưng tài khoản đã xoá → 401, và role được lấy từ DB (không dùng role cũ trong token). Đánh đổi: thêm 1 truy vấn DB mỗi request đã xác thực.
 - **`trust proxy` cấu hình được qua `TRUST_PROXY`, mặc định tắt:** chỉ tin `X-Forwarded-For` khi request đến từ proxy thật (số hop, `loopback`, hoặc danh sách IP/CIDR). `EnvVars` **cấm** giá trị `true` trần vì nó cho phép client tự giả IP để né rate limit.
 - **`errorMessage` tùy biến thay vì override guard:** `ThrottlerException` mặc định trả chuỗi `"ThrottlerException: Too Many Requests"`. Đặt `errorMessage: 'Too many requests'` giữ response lỗi sạch, và `AllExceptionsFilter` bọc lại thành cùng shape với mọi lỗi khác.
 - **Ẩn field nhạy cảm bằng hai lớp:** `passwordHash` vừa `select: false` (không kéo hash khỏi DB) vừa `@Exclude()` (nếu entity lỡ lọt ra ngoài ranh giới DTO thì `ClassSerializerInterceptor` vẫn cắt). DTO ở biên (`toPublicUser`) vẫn là lớp chính.
@@ -77,7 +78,7 @@ Request
 `CreateUserDto`: `email` (IsEmail) · `password` (8..72) · `fullName` (1..255).
 `user` trả về: `{ id, email, fullName, role }` — **không** có `passwordHash`.
 
-Rate limit (vượt → 429): `login` **5 req/60s theo email**, `register` **10**, `refresh` **20**; quiz đọc **30**, start attempt **10**, submit attempt **5** (theo tài khoản). Route đã xác thực đếm **theo tài khoản**, route công khai theo IP; mặc định toàn cục **100 req/60s**.
+Rate limit (vượt → 429): `login` **5 req/60s theo email + IP**, `register` **10**, `refresh` **20**; quiz đọc **30**, start attempt **10**, submit attempt **5** (theo tài khoản). Route đã xác thực đếm **theo tài khoản**, route công khai theo IP; mặc định toàn cục **100 req/60s**.
 
 ## 7. Xử lý lỗi & edge case
 - **400** — DTO sai/thiếu (ValidationPipe `whitelist` + `forbidNonWhitelisted`).

@@ -49,14 +49,17 @@ export const accountOrIpTracker: ThrottlerGetTrackerFunction = (req) => {
   return userId ? `user:${userId}` : `ip:${String((req as RequestWithUser).ip)}`;
 };
 
-// Login là route công khai (chưa có user): đếm theo tài khoản đang nhắm tới qua email,
-// chặn dò mật khẩu phân tán nhiều IP vào cùng account.
+// Login là route công khai (chưa có user). Đếm theo **email + IP** để:
+// - vẫn chặn dò mật khẩu vào một account từ cùng một IP,
+// - nhưng KHÔNG cho một IP khoá đăng nhập của chủ tài khoản từ IP khác (chống lockout DoS).
+// Spam phân tán nhiều IP vẫn bị chặn bởi ngưỡng toàn cục theo IP.
 export const loginTracker: ThrottlerGetTrackerFunction = (req) => {
   const email =
     typeof req.body?.email === 'string'
       ? req.body.email.trim().toLowerCase()
       : '';
-  return email ? `login:${email}` : `login:ip:${String(req.ip)}`;
+  const ip = String((req as RequestWithUser).ip);
+  return email ? `login:${email}:${ip}` : `login:ip:${ip}`;
 };
 
 // Chỉ cần `get` để đọc cấu hình; ConfigService thỏa interface này.
