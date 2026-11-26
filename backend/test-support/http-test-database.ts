@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { User } from '../src/user/user.entity.js';
 import { Learning1794050000000 } from '../src/database/migrations/1794050000000-Learning.js';
 import { LEARNING_ENTITIES } from '../src/learning/learning.entities.js';
+import { CONTENT_ENTITIES } from '../src/courses/content.entities.js';
 
 export async function createHttpTestDatabase(): Promise<DataSource> {
   const schema = `learning_http_${randomUUID().replaceAll('-', '')}`;
@@ -15,7 +16,7 @@ export async function createHttpTestDatabase(): Promise<DataSource> {
     database: process.env.DB_NAME,
     schema,
     extra: { options: `-c search_path=${schema},public` },
-    entities: [User, ...LEARNING_ENTITIES],
+    entities: [User, ...LEARNING_ENTITIES, ...CONTENT_ENTITIES],
     migrations: [Learning1794050000000],
     synchronize: false,
   });

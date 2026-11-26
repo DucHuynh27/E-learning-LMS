@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, IsNull } from 'typeorm';
+import { DataSource, EntityManager, IsNull } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
 import { CatalogAccess } from '../learning/catalog-access.service.js';
 import type {
@@ -92,18 +92,11 @@ export class AttemptsService {
         throw new ConflictException(
           `Maximum of ${MAX_QUIZ_ATTEMPTS} quiz attempts reached`,
         );
-      const [{ now }] = await manager.query<{ now: Date }[]>(
-        'SELECT clock_timestamp() AS "now"',
-      );
-      const active = await repository.findOne({
-        where: { userId: user.userId, quizId: quiz.id, submittedAt: IsNull() },
-        order: { startedAt: 'DESC' },
-      });
-      if (active && !expired(active, quiz, now))
+      const now = await this.databaseTime(manager);
+      if (await this.findActive(manager, user.userId, quiz, now))
         throw new ConflictException(
           'Submit the active attempt before starting another',
         );
-      const questions = await this.quizzes.questions(manager, quiz.id);
       const attempt = await repository.save(
         repository.create({
           userId: user.userId,
@@ -114,14 +107,28 @@ export class AttemptsService {
           passed: null,
         }),
       );
-      return {
-        attemptId: attempt.id,
-        questions: this.quizzes.publicQuestions(questions),
-        startedAt: attempt.startedAt,
-        expiresAt: quiz.timeLimitSec
-          ? new Date(attempt.startedAt.getTime() + quiz.timeLimitSec * 1000)
-          : null,
-      };
+      return this.attemptResponse(manager, quiz, attempt);
+    });
+  }
+
+  async active(
+    user: AuthenticatedUser,
+    lessonId: string,
+  ): Promise<StartedAttemptResponse | null> {
+    this.catalog.assertStudent(user);
+    return this.source.transaction('REPEATABLE READ', async (manager) => {
+      await manager.query('SET TRANSACTION READ ONLY');
+      const lesson = await this.catalog.lesson(lessonId, manager);
+      this.catalog.assertPublished(lesson);
+      await this.catalog.enrolment(user.userId, lesson.courseId, manager);
+      const quiz = await this.quizzes.forLesson(manager, lesson.id);
+      const attempt = await this.findActive(
+        manager,
+        user.userId,
+        quiz,
+        await this.databaseTime(manager),
+      );
+      return attempt ? this.attemptResponse(manager, quiz, attempt) : null;
     });
   }
 
@@ -148,9 +155,7 @@ export class AttemptsService {
       const lesson = await this.catalog.lesson(quiz.lessonId, manager);
       this.catalog.assertPublished(lesson);
       await this.catalog.enrolment(user.userId, lesson.courseId, manager, true);
-      const [{ now }] = await manager.query<{ now: Date }[]>(
-        'SELECT clock_timestamp() AS "now"',
-      );
+      const now = await this.databaseTime(manager);
       if (expired(attempt, quiz, now))
         throw new BadRequestException('The quiz time limit has expired');
       const questions = await this.quizzes.questions(manager, quiz.id);
@@ -172,5 +177,41 @@ export class AttemptsService {
       await repository.update(attempt.id, { score, passed, submittedAt: now });
       return { attemptId: attempt.id, score, passed, submittedAt: now };
     });
+  }
+
+  private async databaseTime(manager: EntityManager): Promise<Date> {
+    const [{ now }] = await manager.query<{ now: Date }[]>(
+      'SELECT clock_timestamp() AS "now"',
+    );
+    return now;
+  }
+
+  private async findActive(
+    manager: EntityManager,
+    userId: string,
+    quiz: Quiz,
+    now: Date,
+  ): Promise<QuizAttempt | null> {
+    const attempt = await manager.getRepository(QuizAttempt).findOne({
+      where: { userId, quizId: quiz.id, submittedAt: IsNull() },
+      order: { startedAt: 'DESC' },
+    });
+    return attempt && !expired(attempt, quiz, now) ? attempt : null;
+  }
+
+  private async attemptResponse(
+    manager: EntityManager,
+    quiz: Quiz,
+    attempt: QuizAttempt,
+  ): Promise<StartedAttemptResponse> {
+    const questions = await this.quizzes.questions(manager, quiz.id);
+    return {
+      attemptId: attempt.id,
+      questions: this.quizzes.publicQuestions(questions),
+      startedAt: attempt.startedAt,
+      expiresAt: quiz.timeLimitSec
+        ? new Date(attempt.startedAt.getTime() + quiz.timeLimitSec * 1000)
+        : null,
+    };
   }
 }

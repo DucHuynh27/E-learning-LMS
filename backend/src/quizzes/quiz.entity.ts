@@ -7,8 +7,13 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
+import { Lesson } from '../lessons/lesson.entity.js';
 
 @Entity('quizzes')
+@ForeignKey(() => Lesson, ['lessonId'], ['id'], {
+  name: 'FK_quiz_lesson',
+  onDelete: 'CASCADE',
+})
 @Unique('UQ_quiz_lesson', ['lessonId'])
 @Check('CHK_quiz_pass_score', '"passScore" BETWEEN 0 AND 100')
 @Check('CHK_quiz_time_limit', '"timeLimitSec" IS NULL OR "timeLimitSec" >= 0')

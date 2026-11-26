@@ -10,6 +10,45 @@ import {
 
 export type ActiveAttempt = Attempt & { deadline: number | null };
 
+export function withDeadline(attempt: Attempt): ActiveAttempt {
+  return {
+    ...attempt,
+    deadline: attempt.expiresAt === null ? null : Date.parse(attempt.expiresAt),
+  };
+}
+
+export async function readActiveAttempt(
+  token: string,
+  lessonId: string,
+): Promise<Attempt | null> {
+  try {
+    return await api<Attempt | null>(
+      `/lessons/${lessonId}/quiz/attempts/active`,
+      token,
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+export async function startOrResumeAttempt(
+  token: string,
+  lessonId: string,
+): Promise<Attempt> {
+  try {
+    return await api<Attempt>(`/lessons/${lessonId}/quiz/attempts`, token, {
+      method: "POST",
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      const active = await readActiveAttempt(token, lessonId);
+      if (active) return active;
+    }
+    throw error;
+  }
+}
+
 export async function loadLearningSnapshot(
   token: string,
   courseId: string,

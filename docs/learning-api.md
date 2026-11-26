@@ -33,6 +33,7 @@
 | POST | `/v1/lessons/:lessonId/quiz` | owner INSTRUCTOR / ADMIN | `CreateQuizDto` | 201 `QuizResponse` |
 | PUT | `/v1/lessons/:lessonId/quiz` | owner INSTRUCTOR / ADMIN | `CreateQuizDto` (thay toàn bộ) | 200 `QuizResponse` |
 | POST | `/v1/lessons/:lessonId/quiz/attempts` | enrolled STUDENT | — | 201 `{ attemptId, questions, startedAt, expiresAt }` |
+| GET | `/v1/lessons/:lessonId/quiz/attempts/active` | enrolled STUDENT (của mình) | — | 200 cùng dữ liệu như khi bắt đầu hoặc `{ data: null }` |
 | POST | `/v1/quiz-attempts/:id/submit` | STUDENT (của mình) | `SubmitAttemptDto` | 200 `{ score, passed }` |
 | GET | `/v1/certificates/me` | Auth | — | 200 `[CertificateResponse]` |
 | GET | `/v1/certificates/:serialNo` | **Public** | — | 200 `PublicCertificateResponse` |
@@ -51,6 +52,7 @@
 - Quiz chọn một đáp án: 1..100 câu, mỗi câu có 2..8 lựa chọn và **đúng một** lựa chọn đúng. Câu bỏ trống tính sai; điểm phần trăm được làm tròn thành số nguyên trên tổng số câu lưu trong DB.
 - Tối đa **3 lượt bắt đầu / user / quiz**, tính cả lượt hết giờ. Mỗi lần chỉ có một lượt còn hiệu lực; bắt đầu thêm khi còn lượt đang làm → 409. `timeLimitSec` bằng 0 hoặc bỏ trống nghĩa là không giới hạn; nộp tại hoặc sau deadline → 400.
 - Response bắt đầu lượt trả `startedAt` và `expiresAt` dạng ISO 8601 theo đồng hồ PostgreSQL; `expiresAt = null` nếu không giới hạn. Frontend dùng deadline này cho đếm giờ, kể cả sau khi tải lại trang; không bắt đầu lại đồng hồ khi nhận response.
+- GET lượt đang làm giữ nguyên mã lượt và deadline. Lượt đã nộp hoặc hết hạn không được khôi phục. Học viên có thể mở lại bài trắc nghiệm sau khi tải lại trình duyệt hoặc đăng nhập ở thiết bị khác.
 - Tạo trùng quiz cho lesson → 409. PUT yêu cầu quiz đã tồn tại, thay toàn bộ nội dung; đã có bất kỳ attempt nào thì không cho sửa → 409 để đáp án không thay đổi giữa lúc làm bài.
 - GET quiz cho phép Auth xem lesson/khoá published; chỉ owner INSTRUCTOR hoặc ADMIN được xem quiz của lesson/khoá chưa published. Progress/start/submit yêu cầu STUDENT với enrolment ACTIVE/COMPLETED và nội dung published.
 

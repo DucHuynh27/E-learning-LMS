@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button";
 import {
   api,
   ApiError,
-  type Attempt,
   type AttemptResult,
   type Session,
 } from "@/lib/learning-api";
 import {
   forgetAttempt,
   rememberAttempt,
+  readActiveAttempt,
   restoreAttempt,
+  startOrResumeAttempt,
+  withDeadline,
   type ActiveAttempt,
 } from "@/lib/learning-state";
 
@@ -48,11 +50,33 @@ function QuizAttemptPanel({
   const [result, setResult] = useState<AttemptResult>();
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
   const remaining =
     attempt?.deadline === null || !attempt
       ? null
       : Math.max(0, Math.ceil((attempt.deadline - now) / 1000));
+
+  useEffect(() => {
+    let active = true;
+    void readActiveAttempt(session.accessToken, lessonId)
+      .then((saved) => {
+        if (!active) return;
+        if (saved) rememberAttempt(storageKey, saved);
+        else forgetAttempt(storageKey);
+        setAttempt(saved ? withDeadline(saved) : null);
+        setNow(Date.now());
+      })
+      .catch(() => {
+        /* The start action can retry discovery. */
+      })
+      .finally(() => {
+        if (active) setChecking(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [lessonId, session.accessToken, storageKey]);
 
   useEffect(() => {
     if (!attempt?.deadline) return;
@@ -65,16 +89,9 @@ function QuizAttemptPanel({
     setBusy(true);
     setError("");
     try {
-      const saved = await api<Attempt>(
-        `/lessons/${lessonId}/quiz/attempts`,
-        session.accessToken,
-        { method: "POST" },
-      );
+      const saved = await startOrResumeAttempt(session.accessToken, lessonId);
       rememberAttempt(storageKey, saved);
-      setAttempt({
-        ...saved,
-        deadline: saved.expiresAt === null ? null : Date.parse(saved.expiresAt),
-      });
+      setAttempt(withDeadline(saved));
       setNow(Date.now());
       setAnswers({});
       setResult(undefined);
@@ -131,6 +148,13 @@ function QuizAttemptPanel({
       setBusy(false);
     }
   }
+
+  if (checking)
+    return (
+      <p role="status" className="mt-3 text-sm">
+        Đang kiểm tra lượt làm bài…
+      </p>
+    );
 
   return (
     <div className="mt-3 space-y-3 rounded-lg border bg-muted/25 p-4">

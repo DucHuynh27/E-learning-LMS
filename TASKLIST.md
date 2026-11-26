@@ -84,8 +84,9 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [ ] S3Module (MinIO `forcePathStyle`) + UploadsModule — `@media`
 - [ ] MediaModule: lưu metadata + serve presigned GET — `@media`
 - [ ] BullModule.forRootAsync + **1 worker job** (thumbnail hoặc email) — `@media`
-- [ ] e2e cho progress + quiz — `@qa`
-- [ ] Tích hợp Learning với schema/module Catalog thật và chốt FK/cascade tới Course/Lesson — `@learning` + `@content` + `@lead`
+- [x] E2E Learning với Catalog thật: xuất bản, ghi danh, progress, khôi phục và nộp quiz, cấp và tra cứu chứng chỉ — `@learning`
+- [x] Migration khóa ngoại Learning ↔ Catalog, kiểm tra cascade và giữ chứng chỉ đã cấp — `@learning`
+- [ ] Review chính sách xóa từ `@content` + `@lead` và xác nhận nghiệm thu từ `@qa`
 - [x] Xác minh GitHub Actions cho PR #29: backend 68 test không skip, frontend 9 test + lint/typecheck/build, e2e nền tảng 1 test — `@learning` ([CI run #31](https://github.com/DucHuynh27/E-learning-LMS/actions/runs/44504032170))
 - [x] Lead review CI/config và xác nhận required checks của main — `@lead` (#11/#12/#18/#27 đã đóng; required checks `lint-and-test`, `e2e`, `frontend` đã xác nhận trên `main`)
 - [x] Chuẩn bị contract DB, các quyết định FK/cascade cần chốt và ma trận bàn giao QA tại [`docs/learning-integration.md`](docs/learning-integration.md) — `@learning`
