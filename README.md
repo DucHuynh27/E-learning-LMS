@@ -153,6 +153,8 @@ API mặc định ở `http://localhost:3000`.
 > Nếu máy bạn **không** có Postgres nào chiếm `5432`, có thể đổi `DB_PORT=5432` trong `.env` cho tiện. Đây là biến duy nhất cần sửa.
 > Lưu ý Podman: các image trong `docker-compose.yml` đã được qualify `docker.io/...` để chạy được trên cả Podman lẫn Docker.
 
+Để nạp 40 khóa học có sẵn sau khi chạy migration, xem [hướng dẫn dữ liệu danh mục mẫu](backend/seeds/README.md).
+
 ### Lệnh thường dùng
 
 ```bash
