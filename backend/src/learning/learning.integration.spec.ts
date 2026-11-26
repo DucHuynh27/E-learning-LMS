@@ -11,6 +11,7 @@ import { AttemptsService } from '../attempts/attempts.service.js';
 import { QuizAnswer, QuizAttempt } from '../attempts/quiz-attempt.entity.js';
 import { Option } from '../quizzes/quiz.entity.js';
 import { LEARNING_ENTITIES } from './learning.entities.js';
+import { CONTENT_ENTITIES } from '../courses/content.entities.js';
 import { CatalogAccess } from './catalog-access.service.js';
 
 describe(
@@ -40,7 +41,7 @@ describe(
         database: process.env.DB_NAME,
         schema,
         extra: { options: `-c search_path=${schema},public` },
-        entities: [User, ...LEARNING_ENTITIES],
+        entities: [User, ...LEARNING_ENTITIES, ...CONTENT_ENTITIES],
         migrations: [Learning1794050000000],
         synchronize: false,
       });

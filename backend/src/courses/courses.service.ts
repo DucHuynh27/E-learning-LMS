@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, QueryFailedError, Repository } from 'typeorm';
 import { Course, CourseStatus } from './course.entity.js';
 import { Section } from '../sections/section.entity.js';
 import { Lesson } from '../lessons/lesson.entity.js';
@@ -196,7 +196,18 @@ export class CoursesService {
 
     this.assertCourseOwner(course, user);
 
-    await this.courseRepo.remove(course);
+    try {
+      await this.courseRepo.remove(course);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        'constraint' in error.driverError &&
+        error.driverError.constraint === 'FK_certificate_course'
+      ) {
+        throw new ConflictException('A course with issued certificates cannot be deleted');
+      }
+      throw error;
+    }
   }
 
   async publish(id: string, user: AuthenticatedUser): Promise<CourseResponse> {

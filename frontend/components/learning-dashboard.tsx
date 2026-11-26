@@ -20,7 +20,6 @@ import {
 import {
   api,
   ApiError,
-  type Attempt,
   type AttemptResult,
   type Certificate,
   type CourseProgress,
@@ -34,9 +33,12 @@ import { useSession } from "@/components/session-provider";
 
 import {
   loadLearningSnapshot,
+  readActiveAttempt,
   restoreAttempt,
   forgetAttempt,
   rememberAttempt,
+  startOrResumeAttempt,
+  withDeadline,
   type ActiveAttempt,
 } from "@/lib/learning-state";
 import styles from "./learning-dashboard.module.css";
@@ -121,16 +123,17 @@ function LearningWorkspace() {
   useEffect(() => {
     if (!session) return;
     let active = true;
-    void loadLearningSnapshot(
-      session.accessToken,
-      demoCourse.id,
-      demoCourse.quizLessonId,
-    ).then((snapshot) => {
+    void Promise.all([
+      loadLearningSnapshot(session.accessToken, demoCourse.id, demoCourse.quizLessonId),
+      readActiveAttempt(session.accessToken, demoCourse.quizLessonId).catch(() => undefined),
+    ]).then(([snapshot, saved]) => {
       if (!active) return;
       setProgress(snapshot.course);
       setCertificates(snapshot.certificates);
       setQuiz(snapshot.quiz);
-      setAttempt(restoreAttempt(session.user.id));
+      if (saved) rememberAttempt(session.user.id, saved);
+      if (saved === null) forgetAttempt(session.user.id);
+      setAttempt(saved ? withDeadline(saved) : saved === null ? null : restoreAttempt(session.user.id));
       setNow(Date.now());
     }).catch((caught: unknown) => {
       if (active) setError(messageFor(caught));
@@ -203,16 +206,8 @@ function LearningWorkspace() {
   function startQuiz() {
     if (!session || !quiz) return;
     void task("start", async () => {
-      const started = await api<Attempt>(
-        `/lessons/${demoCourse.quizLessonId}/quiz/attempts`,
-        session.accessToken,
-        { method: "POST" },
-      );
-      const active = {
-        ...started,
-        deadline: started.expiresAt ? Date.parse(started.expiresAt) : null,
-      };
-      setAttempt(active);
+      const started = await startOrResumeAttempt(session.accessToken, demoCourse.quizLessonId);
+      setAttempt(withDeadline(started));
       setAnswers({});
       setResult(null);
       setNow(Date.now());

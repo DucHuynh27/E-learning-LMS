@@ -8,10 +8,15 @@ import {
   Unique,
 } from 'typeorm';
 import { User } from '../user/user.entity.js';
+import { Lesson } from '../lessons/lesson.entity.js';
 
 @Entity('lesson_progress')
 @ForeignKey(() => User, ['userId'], ['id'], {
   name: 'FK_progress_user',
+  onDelete: 'CASCADE',
+})
+@ForeignKey(() => Lesson, ['lessonId'], ['id'], {
+  name: 'FK_progress_lesson',
   onDelete: 'CASCADE',
 })
 @Unique('UQ_progress_user_lesson', ['userId', 'lessonId'])

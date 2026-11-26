@@ -5,9 +5,55 @@ import {
   loadLearningSnapshot,
   rememberAttempt,
   restoreAttempt,
+  startOrResumeAttempt,
 } from "../lib/learning-state";
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe("Recover an active quiz attempt", () => {
+  it("returns the server attempt when starting another attempt conflicts", async () => {
+    const active = {
+      attemptId: "attempt",
+      questions: [],
+      startedAt: "2026-11-26T00:00:00Z",
+      expiresAt: null,
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ message: "Active attempt exists" }, { status: 409 }),
+      )
+      .mockResolvedValueOnce(Response.json({ data: active }));
+    vi.stubGlobal("fetch", fetch);
+    await expect(startOrResumeAttempt("jwt", "lesson")).resolves.toEqual(
+      active,
+    );
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls[0][0]).toBe("/api/lessons/lesson/quiz/attempts");
+    expect(fetch.mock.calls[1][0]).toBe(
+      "/api/lessons/lesson/quiz/attempts/active",
+    );
+  });
+
+  it("keeps the original conflict when the learner has no active attempt", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json(
+            { message: "Maximum of 3 quiz attempts reached" },
+            { status: 409 },
+          ),
+        )
+        .mockResolvedValueOnce(Response.json({ data: null })),
+    );
+    await expect(startOrResumeAttempt("jwt", "lesson")).rejects.toThrow(
+      "Maximum of 3 quiz attempts reached",
+    );
+  });
+});
+
 describe("Learning snapshot with an optional quiz", () => {
   const course = {
     progressPct: 50,
