@@ -32,6 +32,7 @@ describe('MediaService', () => {
   };
   let access: {
     assertCanManageLesson: ReturnType<typeof vi.fn>;
+    assertCanViewVideo: ReturnType<typeof vi.fn>;
     assertCanPlayVideo: ReturnType<typeof vi.fn>;
   };
 
@@ -55,6 +56,7 @@ describe('MediaService', () => {
     };
     access = {
       assertCanManageLesson: vi.fn(),
+      assertCanViewVideo: vi.fn(),
       assertCanPlayVideo: vi.fn(),
     };
     service = new MediaService(
@@ -222,8 +224,13 @@ describe('MediaService', () => {
 
     const result = await service.getByLesson(
       'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      user,
     );
 
+    expect(access.assertCanViewVideo).toHaveBeenCalledWith(
+      'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+      user,
+    );
     expect(result).not.toHaveProperty('originalKey');
     expect(result.thumbnailKey).toBe('videos/2ec4/thumbnail.jpg');
   });

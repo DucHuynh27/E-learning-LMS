@@ -43,8 +43,11 @@ export class MediaController {
   }
 
   @Get('lessons/:lessonId/video')
-  getByLesson(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
-    return this.media.getByLesson(lessonId);
+  getByLesson(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.media.getByLesson(lessonId, user);
   }
 
   @Get('videos/:id/playback')

@@ -4,8 +4,6 @@
 
 **Hợp đồng API:** [`media-api.md`](media-api.md).
 
-> Nhánh Media giữ nguyên các file cấu hình chung theo yêu cầu. Vì vậy `MediaModule`, entity `Video` và env Media chưa được đăng ký vào app; endpoints/worker chỉ hoạt động sau khi Lead tích hợp cấu hình.
-
 ## 1. Tổng quan
 
 Media cho phép instructor tải video trực tiếp lên MinIO, lưu metadata trong PostgreSQL và phát URL xem có thời hạn. API không nhận hay truyền tiếp nội dung video; worker xử lý nền để sinh thumbnail và thời lượng.
@@ -64,7 +62,7 @@ Sau khi worker cập nhật `READY`, việc phát `video.ready` vào room course
 |---|---|---|---|
 | `Video` | `lessonId`, `originalKey`, `thumbnailKey`, `durationSec`, `status`, `error` | unique `lessonId`; index `status` | Một video cho mỗi lesson; tra cứu các video theo trạng thái xử lý |
 
-Migration hiện chưa tạo FK từ `Video.lessonId` sang `Lesson`, vì entity Lesson thuộc nhánh Content và chưa được tích hợp trong nhánh này.
+`videos.lessonId` có khóa ngoại `FK_videos_lesson` tham chiếu `lessons(id)` với `ON DELETE CASCADE` để tránh dữ liệu mồ côi khi xóa bài học.
 
 ## 6. API endpoints
 
@@ -72,7 +70,7 @@ Migration hiện chưa tạo FK từ `Video.lessonId` sang `Lesson`, vì entity 
 |---|---|---|---|---|
 | POST | `/v1/lessons/:lessonId/video/upload-url` | owner / ADMIN | `UploadUrlDto` | `{ uploadUrl, key, expiresInSec }` |
 | POST | `/v1/lessons/:lessonId/video/confirm` | owner / ADMIN | `ConfirmUploadDto` | 202 `VideoResponse` |
-| GET | `/v1/lessons/:lessonId/video` | Auth | — | `VideoResponse` |
+| GET | `/v1/lessons/:lessonId/video` | enrolled / owner / ADMIN | — | `VideoResponse` |
 | GET | `/v1/videos/:id/playback` | enrolled / owner / ADMIN | — | `{ url, expiresInSec }` |
 
 `VideoResponse` không trả `originalKey`. DTO chi tiết và response contract nằm trong [`media-api.md`](media-api.md).
@@ -103,7 +101,5 @@ Migration hiện chưa tạo FK từ `Video.lessonId` sang `Lesson`, vì entity 
 
 ## 10. Hạn chế / chưa làm
 
-- Chưa có FK `Video.lessonId` cho tới khi tích hợp schema Content.
 - Chưa phát sự kiện `video.ready` tới room course; cần tích hợp với `WsGateway` thuộc nhánh QA.
-- **Chờ tích hợp cấu hình chung:** đăng ký `MediaModule`, thêm `Video` vào TypeORM DataSource, bổ sung `REDIS_HOST`, `MINIO_ENDPOINT`, `MINIO_REGION`, `MINIO_BUCKET`, `MINIO_PRESIGNED_TTL` và cấu hình MinIO CORS trong Compose. Các thay đổi này cần Lead review.
 - Chưa có Media e2e do QA sở hữu; unit test và smoke test không thay thế bước ký QA.

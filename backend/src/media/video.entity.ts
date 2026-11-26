@@ -2,10 +2,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ForeignKey,
   Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Lesson } from '../lessons/lesson.entity.js';
 
 export enum VideoStatus {
   PENDING = 'PENDING',
@@ -15,6 +17,10 @@ export enum VideoStatus {
 }
 
 @Entity('videos')
+@ForeignKey(() => Lesson, ['lessonId'], ['id'], {
+  name: 'FK_videos_lesson',
+  onDelete: 'CASCADE',
+})
 @Index('IDX_videos_status', ['status'])
 export class Video {
   @PrimaryGeneratedColumn('uuid')

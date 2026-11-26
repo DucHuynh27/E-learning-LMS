@@ -188,4 +188,64 @@ describe('MediaAccessService', () => {
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it('allows owner to view video metadata even while lesson is draft', async () => {
+    query.mockResolvedValue([
+      {
+        id: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        type: 'VIDEO',
+        isPublished: false,
+        courseStatus: 'DRAFT',
+        instructorId: owner.userId,
+        courseId: '5df221d4-a89d-4608-bf1a-1827ba21c036',
+      },
+    ]);
+
+    await expect(
+      service.assertCanViewVideo(
+        'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        owner,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it('rejects viewing video metadata for unenrolled students or unpublished lessons', async () => {
+    query.mockResolvedValueOnce([
+      {
+        id: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        type: 'VIDEO',
+        isPublished: false,
+        courseStatus: 'PUBLISHED',
+        instructorId: owner.userId,
+        courseId: '5df221d4-a89d-4608-bf1a-1827ba21c036',
+      },
+    ]);
+
+    await expect(
+      service.assertCanViewVideo(
+        'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        student,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    query
+      .mockResolvedValueOnce([
+        {
+          id: 'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+          type: 'VIDEO',
+          isPublished: true,
+          courseStatus: 'PUBLISHED',
+          instructorId: owner.userId,
+          courseId: '5df221d4-a89d-4608-bf1a-1827ba21c036',
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    await expect(
+      service.assertCanViewVideo(
+        'b5d8a218-d68f-47ad-a8ef-6750e7f745a3',
+        student,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
 });

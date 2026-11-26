@@ -100,7 +100,11 @@ export class MediaService {
     return this.toResponse(video);
   }
 
-  async getByLesson(lessonId: string): Promise<VideoResponse> {
+  async getByLesson(
+    lessonId: string,
+    user: AuthenticatedUser,
+  ): Promise<VideoResponse> {
+    await this.access.assertCanViewVideo(lessonId, user);
     const video = await this.videos.findOneBy({ lessonId });
     if (!video) throw new NotFoundException('Video not found');
     return this.toResponse(video);

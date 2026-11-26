@@ -27,12 +27,26 @@ export class MediaAccessService {
   ): Promise<void> {
     const lesson = await this.findLesson(lessonId);
     this.assertVideoLesson(lesson);
-    if (
-      user.role !== Role.ADMIN &&
-      (user.role !== Role.INSTRUCTOR || lesson.instructorId !== user.userId)
-    ) {
+    if (!this.isOwnerOrAdmin(lesson, user)) {
       throw new ForbiddenException('You cannot manage this lesson');
     }
+  }
+
+  async assertCanViewVideo(
+    lessonId: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const lesson = await this.findLesson(lessonId);
+    this.assertVideoLesson(lesson);
+    if (this.isOwnerOrAdmin(lesson, user)) {
+      return;
+    }
+
+    if (!lesson.isPublished || lesson.courseStatus !== 'PUBLISHED') {
+      throw new ForbiddenException('Lesson is not published');
+    }
+
+    await this.assertEnrolled(lesson.courseId, user.userId);
   }
 
   async assertCanPlayVideo(
@@ -45,19 +59,30 @@ export class MediaAccessService {
       throw new ForbiddenException('Lesson is not published');
     }
 
-    if (
-      user.role === Role.ADMIN ||
-      (user.role === Role.INSTRUCTOR && lesson.instructorId === user.userId)
-    ) {
+    if (this.isOwnerOrAdmin(lesson, user)) {
       return;
     }
 
+    await this.assertEnrolled(lesson.courseId, user.userId);
+  }
+
+  private isOwnerOrAdmin(
+    lesson: LessonAccessRecord,
+    user: AuthenticatedUser,
+  ): boolean {
+    return (
+      user.role === Role.ADMIN ||
+      (user.role === Role.INSTRUCTOR && lesson.instructorId === user.userId)
+    );
+  }
+
+  private async assertEnrolled(courseId: string, userId: string): Promise<void> {
     const enrollments = await this.dataSource.query<{ id: string }[]>(
       `SELECT e."id"
        FROM "enrolments" e
        WHERE e."courseId" = $1 AND e."userId" = $2 AND e."status" IN ('ACTIVE', 'COMPLETED')
        LIMIT 1`,
-      [lesson.courseId, user.userId],
+      [courseId, userId],
     );
     if (enrollments.length === 0) {
       throw new ForbiddenException('An active enrollment is required');
