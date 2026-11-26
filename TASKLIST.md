@@ -104,8 +104,9 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [x] Certificate: entity + tự phát khi học đủ mọi lesson published (idempotent) + JSON/HTML tra cứu, unit/integration — `@learning`
 - [x] Q&A: entity QnaThread/QnaPost, migration, REST controller/service, DTO/serializer response và WsGateway cơ bản (handshake JWT, room theo course) — `@qa`
 - [x] Cứng hoá payload WebSocket Q&A/Notification sang Thread/Post/Notification response DTO, loại bỏ `authorId`, `userId` và identity field lồng nhau — `@qa`
-- [x] Fail closed catalog access: thiếu bảng/schema hoặc lỗi DB không được cấp quyền; course không tồn tại trả 404; chưa enroll trả 403 — `@qa`
-- [ ] Nghiệm thu E2E broadcast/room âm và notification ownership; cần `@lead` review Issue #51 — **(đang làm)** `@qa`
+- [x] Fail closed catalog access: mọi lỗi xác minh catalog/database được chuẩn hóa 503; course không tồn tại trả 404; chưa enroll trả 403 — `@qa`
+- [x] Revalidate course room trước mỗi broadcast: socket mất quyền bị loại khỏi room, lỗi catalog/DB fail closed không gửi broadcast — `@qa`
+- [ ] Nghiệm thu E2E broadcast/room âm và notification ownership cần `@lead` review Issue #51 — **(đang làm)** `@qa`
 - [x] HealthModule (Postgres/Redis/MinIO): implementation + wiring + unit/probe local — `@learning`
 - [x] PostgreSQL health probe dùng chung query đang chờ, giữ hạn response 1 giây và phục hồi sau kết quả muộn; ba regression concurrency/timeout — `@learning`
 - [x] Hardening: rate limit login/quiz, CORS, ẩn field nhạy cảm — `@lead`
@@ -116,9 +117,10 @@ Còn ~20h đệm. Nếu trễ: cắt **Realtime** trước, rồi **Certificate*
 - [ ] e2e toàn hệ + script demo — `@qa`
   - [x] Happy-path realtime: connect/socket join, tạo thread/post, thread details, notification REST và response JSON không lộ `authorId`/`userId` — `@qa`
   - [x] Payload WebSocket thread/post/notification không lộ `authorId`, `userId` hoặc identity field lồng nhau; join course chưa enroll trả ack false — `@qa`
-  - [x] Unit authorization/catalog: course missing 404; catalog unavailable 503; student enrolled/unenrolled; database error fail closed — `@qa`
-  - [ ] Ma trận từ chối: chưa enroll, join course trái quyền, student resolve, thread/notification không tồn tại và notification của người khác — `@qa`
-  - [ ] Chứng minh cleanup/reset database test và test DB riêng thay vì dùng database chung; migrations đã chạy trước E2E — `@qa`
+  - [x] Unit authorization/catalog: course missing 404; catalog/database unavailable 503; student enrolled/unenrolled; database error fail closed — `@qa`
+  - [x] Ma trận E2E: student resolve 403, owner/admin resolve success, notification own/other, missing thread/notification, cross-room và revoke enrollment — `@qa`
+  - [x] Database E2E riêng `lms_e2e` với cleanup Catalog/QnA/Notification/Enrolment; chạy 2 lần liên tiếp đều pass — `@qa`
+  - [x] Trust-proxy: cô lập state/fileParallelism và stress `pnpm test` 10/10 pass — `@qa`
 - [x] Demo Learning riêng: seed/start backend port 3002 và frontend Next.js port 3100, kết nối Auth/Progress/Quiz/Certificate — `@learning`
 - [ ] Mỗi người: viết `docs/<module>.md` giải thích kiến trúc module mình — **cả nhóm**
   - [x] Phần Learning: `docs/learning.md`, cập nhật `docs/learning-api.md` và hướng dẫn chạy `frontend/README.md` — `@learning`

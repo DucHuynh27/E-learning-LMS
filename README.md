@@ -46,16 +46,16 @@ Phạm vi theo [`TASKLIST.md`](TASKLIST.md): không triển khai HLS đa bitrate
 | 2. Media Pipeline               | Upload MinIO → BullMQ → thumbnail            | Đậu Xuân Quang (@media) |
 | 3. Progress & Certificate       | % hoàn thành + chứng chỉ record và tra cứu  | Phạm Ngọc Minh Quân (@learning) |
 | 4. Quiz                         | Thi, chấm điểm, giới hạn lượt/thời gian      | Phạm Ngọc Minh Quân (@learning) |
-| 5. Realtime Q&A & Notifications | Socket.io, room theo course — **đang PARTIAL**, chờ cứng hoá payload WS, test từ chối và review PR | Bùi Trần Hoàn Mỹ (@qa) |
+| 5. Realtime Q&A & Notifications | Socket.io, room theo course — **implementation + security follow-up đã test**, chờ CI/review PR | Bùi Trần Hoàn Mỹ (@qa) |
 | 6. Hardening                    | Rate limit, caching, observability, e2e      | Cả nhóm        |
 
 ## Tiến độ hiện tại
 
 | Hạng mục | Trạng thái | Tiến độ |
 | --- | --- | --- |
-| Realtime & Q&A | REST, entity/migration, WebSocket cơ bản, room theo course và notification đã triển khai; còn thiếu acceptance âm và cleanup test DB riêng | PARTIAL |
-| Response DTO / Serializer (Issue #51) | REST đã map DTO và loại bỏ `authorId`/`userId`; payload WebSocket vẫn phát entity thô, cần map trước khi kết luận DONE | NEED REVIEW |
-| Kiểm tra realtime | Backend build/lint xanh; E2E 9/9; unit suite đầy đủ có 1 timeout trust-proxy lặp lại; test isolated file đó qua 2/2 | PARTIAL |
+| Realtime & Q&A | REST, entity/migration, payload DTO, room revalidation và notification đã triển khai; các acceptance âm và ownership đã bổ sung | DONE với bằng chứng local |
+| Response DTO / Serializer (Issue #51) | REST/WebSocket đã dùng DTO; loại bỏ `authorId`, `userId`, `replierId`, `resolvedBy` khỏi public payload | DONE với bằng chứng test |
+| Kiểm tra realtime | Build/lint/e2e/unit pass; E2E DB riêng đã chạy 2 lần liên tiếp pass; trust-proxy stress 10/10 pass | DONE local |
 | PR #61 | Đang mở trên `main`, chờ CI cuối cùng và approving review; chưa merge | Chưa hoàn tất quy trình release |
 
 ## Quy ước làm việc
