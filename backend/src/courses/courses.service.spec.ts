@@ -175,6 +175,23 @@ describe('CoursesService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
+    it('only counts published lessons', async () => {
+      vi.mocked(courseRepo.findOne!).mockResolvedValue(createCourse());
+      vi.mocked(sectionRepo.find!).mockResolvedValue([
+        { id: 'sec-1', courseId: '33333333-3333-3333-3333-333333333333' } as Section,
+      ]);
+      vi.mocked(lessonRepo.count!).mockResolvedValue(0);
+
+      await expect(
+        service.publish('33333333-3333-3333-3333-333333333333', mockInstructor),
+      ).rejects.toThrow(ConflictException);
+      expect(lessonRepo.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ isPublished: true }),
+        }),
+      );
+    });
+
     it('publishes course if it has at least 1 section and 1 lesson', async () => {
       vi.mocked(courseRepo.findOne!).mockResolvedValue(createCourse());
       vi.mocked(sectionRepo.find!).mockResolvedValue([

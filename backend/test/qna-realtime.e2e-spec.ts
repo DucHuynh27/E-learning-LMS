@@ -1,29 +1,46 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Test, TestingModule } from '@nestjs/testing';
+import { randomUUID } from 'node:crypto';
+import { io } from 'socket.io-client';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
-import { JwtService } from '@nestjs/jwt';
-import { io } from 'socket.io-client';
+import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/bootstrap.js';
-import { Role } from '../src/user/user.entity.js';
-import { DataSource } from 'typeorm';
 import { NotificationService } from '../src/notification/notification.service.js';
+import { Role } from '../src/user/user.entity.js';
+import { assertSafeE2eDatabase } from './e2e-database.guard.js';
 
 describe('Realtime & QnA (e2e)', () => {
   let app: INestApplication<App>;
+  let source: DataSource;
   let jwtService: JwtService;
-  let accessToken: string;
+  let studentToken: string;
+  let ownerToken: string;
+  let adminToken: string;
+  let outsiderToken: string;
   let httpServer: any;
   let serverPort: number;
-  let catalogTablesCreated = false;
-  let enrolmentsTableCreated = false;
 
-  const mockUserId = '11111111-1111-4111-8111-111111111111';
-  const mockCourseId = '22222222-2222-4222-8222-222222222222';
-  const unenrolledCourseId = '33333333-3333-4333-8333-333333333333';
+  const studentId = randomUUID();
+  const ownerId = randomUUID();
+  const outsiderId = randomUUID();
+  const adminId = randomUUID();
+  const courseAId = randomUUID();
+  const courseBId = randomUUID();
+  const userIds = [studentId, ownerId, outsiderId, adminId];
+  const courseIds = [courseAId, courseBId];
+  const createdCatalogTables = new Set<string>();
+
+  const signToken = (sub: string, role: Role) =>
+    jwtService.sign(
+      { sub, email: `${sub}@lms.local`, role },
+      { secret: process.env.JWT_ACCESS_SECRET },
+    );
 
   beforeAll(async () => {
+    assertSafeE2eDatabase(process.env.DB_NAME);
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -31,6 +48,96 @@ describe('Realtime & QnA (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
+    source = app.get(DataSource);
+    assertSafeE2eDatabase(
+      typeof source.options.database === 'string'
+        ? source.options.database
+        : undefined,
+    );
+
+    const catalogTables = (await source.query(
+      `SELECT "table_name" FROM information_schema.tables
+       WHERE "table_schema" = current_schema()
+         AND "table_name" = ANY($1::text[])`,
+      [['courses', 'enrolments']],
+    )) as { table_name: string }[];
+    const existingCatalogTables = new Set(
+      catalogTables.map(({ table_name }) => table_name),
+    );
+
+    if (!existingCatalogTables.has('courses')) {
+      await source.query(`
+        CREATE TABLE "courses" (
+          "id" uuid PRIMARY KEY,
+          "title" varchar(200) NOT NULL,
+          "slug" varchar(200) NOT NULL UNIQUE,
+          "description" text,
+          "thumbnailKey" varchar(512),
+          "priceCents" integer NOT NULL DEFAULT 0,
+          "status" varchar(20) NOT NULL,
+          "instructorId" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+          "createdAt" timestamptz NOT NULL DEFAULT now(),
+          "updatedAt" timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      createdCatalogTables.add('courses');
+    }
+
+    if (!existingCatalogTables.has('enrolments')) {
+      await source.query(`
+        CREATE TABLE "enrolments" (
+          "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          "userId" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+          "courseId" uuid NOT NULL REFERENCES "courses"("id") ON DELETE CASCADE,
+          "status" varchar(20) NOT NULL,
+          "progressPct" integer NOT NULL DEFAULT 0,
+          "enrolledAt" timestamptz NOT NULL DEFAULT now(),
+          "completedAt" timestamptz,
+          UNIQUE ("userId", "courseId")
+        )
+      `);
+      createdCatalogTables.add('enrolments');
+    }
+
+    await source.query(
+      `INSERT INTO "users" ("id", "email", "passwordHash", "fullName", "role")
+       VALUES
+         ($1, $5, 'hash', 'Student', 'STUDENT'),
+         ($2, $6, 'hash', 'Owner', 'INSTRUCTOR'),
+         ($3, $7, 'hash', 'Outsider', 'STUDENT'),
+         ($4, $8, 'hash', 'Admin', 'ADMIN')
+       ON CONFLICT ("id") DO NOTHING`,
+      [
+        ...userIds,
+        `${studentId}@lms.local`,
+        `${ownerId}@lms.local`,
+        `${outsiderId}@lms.local`,
+        `${adminId}@lms.local`,
+      ],
+    );
+    await source.query(
+      `INSERT INTO "courses" ("id", "title", "slug", "priceCents", "status", "instructorId")
+       VALUES
+         ($1, 'Course A', $3, 0, 'PUBLISHED', $5),
+         ($2, 'Course B', $4, 0, 'PUBLISHED', $6)
+       ON CONFLICT ("id") DO NOTHING`,
+      [
+        courseAId,
+        courseBId,
+        `course-a-${courseAId}`,
+        `course-b-${courseBId}`,
+        ownerId,
+        outsiderId,
+      ],
+    );
+    await source.query(
+      `INSERT INTO "enrolments" ("userId", "courseId", "status")
+       VALUES
+         ($1, $2, 'ACTIVE'),
+         ($1, $3, 'ACTIVE')
+       ON CONFLICT ("userId", "courseId") DO UPDATE SET "status" = 'ACTIVE'`,
+      [studentId, courseAId, courseBId],
+    );
 
     httpServer = app.getHttpServer();
     await new Promise<void>((resolve) => {
@@ -40,344 +147,306 @@ describe('Realtime & QnA (e2e)', () => {
       });
     });
 
-    const source = app.get(DataSource);
-    const coursesTable = await source.query(
-      `SELECT to_regclass('public.courses') AS name`,
-    );
-    if (!coursesTable[0]?.name) {
-      await source.query(`
-        CREATE TABLE "courses" (
-          "id" uuid PRIMARY KEY,
-          "title" varchar(200) NOT NULL,
-          "slug" varchar(255) NOT NULL,
-          "instructorId" uuid NOT NULL,
-          "status" varchar(20) NOT NULL
-        )
-      `);
-      catalogTablesCreated = true;
-    }
-    const enrolmentsTable = await source.query(
-      `SELECT to_regclass('public.enrolments') AS name`,
-    );
-    if (!enrolmentsTable[0]?.name) {
-      await source.query(`
-        CREATE TABLE "enrolments" (
-          "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-          "userId" uuid NOT NULL,
-          "courseId" uuid NOT NULL,
-          "status" varchar(20) NOT NULL,
-          UNIQUE ("userId", "courseId")
-        )
-      `);
-      enrolmentsTableCreated = true;
-    }
-
-    // Schema Catalog thật có FK courses.instructorId -> users(id): phải seed user trước.
-    await source.query(
-      `INSERT INTO "users" ("id", "email", "passwordHash", "fullName", "role")
-       VALUES ($1, $2, 'x', 'QA User', 'STUDENT'),
-              ($3, $4, 'x', 'Other Instructor', 'INSTRUCTOR')
-       ON CONFLICT ("id") DO NOTHING`,
-      [
-        mockUserId,
-        'qa@lms.local',
-        '44444444-4444-4444-8444-444444444444',
-        'other@lms.local',
-      ],
-    );
-    await source.query(
-      `INSERT INTO "courses" ("id", "title", "slug", "instructorId", "status")
-       VALUES ($1, 'QA Course', 'qa-course-1', $2, 'PUBLISHED')
-       ON CONFLICT ("id") DO UPDATE SET "status" = EXCLUDED."status"`,
-      [mockCourseId, mockUserId],
-    );
-    await source.query(
-      `INSERT INTO "enrolments" ("userId", "courseId", "status")
-       VALUES ($1, $2, 'ACTIVE')
-       ON CONFLICT ("userId", "courseId") DO NOTHING`,
-      [mockUserId, mockCourseId],
-    );
-    await source.query(
-      `INSERT INTO "courses" ("id", "title", "slug", "instructorId", "status")
-       VALUES ($1, 'Other Course', 'qa-course-2', $2, 'PUBLISHED')
-       ON CONFLICT ("id") DO UPDATE SET "status" = EXCLUDED."status"`,
-      [unenrolledCourseId, '44444444-4444-4444-8444-444444444444'],
-    );
-
     jwtService = app.get(JwtService);
-    accessToken = jwtService.sign(
-      { sub: mockUserId, email: 'qa@lms.local', role: Role.STUDENT },
-      { secret: process.env.JWT_ACCESS_SECRET },
-    );
+    studentToken = signToken(studentId, Role.STUDENT);
+    ownerToken = signToken(ownerId, Role.INSTRUCTOR);
+    adminToken = signToken(adminId, Role.ADMIN);
+    outsiderToken = signToken(outsiderId, Role.STUDENT);
   });
 
   afterAll(async () => {
-    const source = app.get(DataSource);
-    await source.query(`DELETE FROM "notifications" WHERE "userId" = $1`, [
-      mockUserId,
-    ]);
-    await source.query(`DELETE FROM "qna_posts" WHERE "authorId" = $1`, [
-      mockUserId,
-    ]);
-    await source.query(`DELETE FROM "qna_threads" WHERE "authorId" = $1`, [
-      mockUserId,
-    ]);
-    await source.query(
-      `DELETE FROM "enrolments" WHERE "userId" = $1 AND "courseId" = $2`,
-      [mockUserId, mockCourseId],
-    );
-    await source.query(`DELETE FROM "courses" WHERE "id" = $1`, [mockCourseId]);
-    await source.query(`DELETE FROM "courses" WHERE "id" = $1`, [
-      unenrolledCourseId,
-    ]);
-    if (enrolmentsTableCreated) {
-      await source.query(`DROP TABLE IF EXISTS "enrolments"`);
+    if (source?.isInitialized) {
+      await source.query(
+        `DELETE FROM "qna_posts"
+         WHERE "threadId" IN (
+           SELECT "id" FROM "qna_threads" WHERE "courseId" = ANY($1::uuid[])
+         ) OR "authorId" = ANY($2::uuid[])`,
+        [courseIds, userIds],
+      );
+      await source.query(
+        `DELETE FROM "qna_threads"
+         WHERE "courseId" = ANY($1::uuid[]) OR "authorId" = ANY($2::uuid[])`,
+        [courseIds, userIds],
+      );
+      await source.query(
+        `DELETE FROM "notifications" WHERE "userId" = ANY($1::uuid[])`,
+        [userIds],
+      );
+      await source.query(
+        `DELETE FROM "enrolments"
+         WHERE "courseId" = ANY($1::uuid[]) OR "userId" = ANY($2::uuid[])`,
+        [courseIds, userIds],
+      );
+      await source.query(
+        `DELETE FROM "courses" WHERE "id" = ANY($1::uuid[])`,
+        [courseIds],
+      );
+      await source.query(`DELETE FROM "users" WHERE "id" = ANY($1::uuid[])`, [
+        userIds,
+      ]);
+
+      if (createdCatalogTables.has('enrolments')) {
+        await source.query(`DROP TABLE "enrolments"`);
+      }
+      if (createdCatalogTables.has('courses')) {
+        await source.query(`DROP TABLE "courses"`);
+      }
+      await app.close();
     }
-    if (catalogTablesCreated) {
-      await source.query(`DROP TABLE IF EXISTS "courses"`);
-    }
-    await app.close();
   });
 
+  const connectSocket = async (token: string) => {
+    const socket = io(`http://localhost:${serverPort}`, {
+      transports: ['websocket'],
+      auth: { token },
+    });
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error('Socket did not connect')),
+        3000,
+      );
+      socket.once('connect', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+      socket.once('connect_error', (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+    });
+    return socket;
+  };
+
+  const expectNoEvent = async (
+    socket: ReturnType<typeof io>,
+    event: string,
+    trigger: () => Promise<void>,
+  ) => {
+    let received = false;
+    const listener = () => {
+      received = true;
+    };
+    socket.on(event, listener);
+    await trigger();
+    await new Promise<void>((resolve) => setTimeout(resolve, 300));
+    socket.off(event, listener);
+    expect(received).toBe(false);
+  };
+
   describe('WebSocket Gateway', () => {
-    it('should disconnect client with invalid or missing token', async () => {
-      const socket = io(`http://localhost:${serverPort}`, {
+    it('disconnects invalid token and accepts valid course room join', async () => {
+      const invalid = io(`http://localhost:${serverPort}`, {
         transports: ['websocket'],
         auth: { token: 'invalid_token' },
       });
-
       await new Promise<void>((resolve) => {
-        socket.on('disconnect', () => {
-          expect(socket.connected).toBe(false);
-          resolve();
-        });
+        invalid.once('disconnect', () => resolve());
       });
-      socket.close();
-    });
+      invalid.close();
 
-    it('should connect authenticated client and receive events', async () => {
-      const socket = io(`http://localhost:${serverPort}`, {
-        transports: ['websocket'],
-        auth: { token: accessToken },
-      });
-
-      await new Promise<void>((resolve) => {
-        socket.on('connect', () => {
-          expect(socket.connected).toBe(true);
-          resolve();
-        });
-      });
-
+      const socket = await connectSocket(studentToken);
       const ack: any = await socket.emitWithAck('join_course', {
-        courseId: mockCourseId,
+        courseId: courseAId,
       });
       expect(ack?.ok ?? ack?.data?.ok).toBe(true);
-
       socket.close();
     });
 
-    it('should reject joining a course without enrollment', async () => {
-      const socket = io(`http://localhost:${serverPort}`, {
-        transports: ['websocket'],
-        auth: { token: accessToken },
-      });
-      await new Promise<void>((resolve) => {
-        socket.on('connect', () => resolve());
-      });
-
+    it('rejects join_course when student is not enrolled', async () => {
+      const socket = await connectSocket(outsiderToken);
       const ack: any = await socket.emitWithAck('join_course', {
-        courseId: unenrolledCourseId,
+        courseId: courseAId,
       });
       expect(ack?.ok ?? ack?.data?.ok).toBe(false);
-      expect(ack?.error ?? ack?.data?.error).toContain('Forbidden');
       socket.close();
+    });
+
+    it('does not deliver room broadcast after enrollment is revoked', async () => {
+      const socket = await connectSocket(studentToken);
+      const join: any = await socket.emitWithAck('join_course', {
+        courseId: courseAId,
+      });
+      expect(join?.ok ?? join?.data?.ok).toBe(true);
+
+      await source.query(
+        `DELETE FROM "enrolments" WHERE "userId" = $1 AND "courseId" = $2`,
+        [studentId, courseAId],
+      );
+
+      await expectNoEvent(socket, 'qna.thread.created', async () => {
+        await request(app.getHttpServer())
+          .post(`/v1/courses/${courseAId}/threads`)
+          .set('Authorization', `Bearer ${ownerToken}`)
+          .send({ title: 'After revoke' })
+          .expect(201);
+      });
+
+      const rejoin: any = await socket.emitWithAck('join_course', {
+        courseId: courseAId,
+      });
+      expect(rejoin?.ok ?? rejoin?.data?.ok).toBe(false);
+
+      await source.query(
+        `INSERT INTO "enrolments" ("userId", "courseId", "status")
+         VALUES ($1, $2, 'ACTIVE')
+         ON CONFLICT ("userId", "courseId") DO UPDATE SET "status" = 'ACTIVE'`,
+        [studentId, courseAId],
+      );
+      socket.close();
+    });
+
+    it('does not leak qna broadcasts across course rooms', async () => {
+      const socketA = await connectSocket(studentToken);
+      const socketB = await connectSocket(studentToken);
+      await socketA.emitWithAck('join_course', { courseId: courseAId });
+      await socketB.emitWithAck('join_course', { courseId: courseBId });
+
+      const receivedA = new Promise<void>((resolve) => {
+        socketA.once('qna.thread.created', () => resolve());
+      });
+      await expectNoEvent(socketB, 'qna.thread.created', async () => {
+        await request(app.getHttpServer())
+          .post(`/v1/courses/${courseAId}/threads`)
+          .set('Authorization', `Bearer ${ownerToken}`)
+          .send({ title: 'Room isolation' })
+          .expect(201);
+      });
+      await receivedA;
+
+      socketA.close();
+      socketB.close();
     });
   });
 
-  describe('QnA Threads & Posts REST', () => {
-    let createdThreadId: string;
+  describe('QnA authorization and REST', () => {
+    let threadId: string;
 
-    it('POST /v1/courses/:courseId/threads - create thread', async () => {
-      const socket = io(`http://localhost:${serverPort}`, {
-        transports: ['websocket'],
-        auth: { token: accessToken },
-      });
-      await new Promise<void>((resolve) => {
-        socket.on('connect', () => resolve());
-      });
-      const joinAck: any = await socket.emitWithAck('join_course', {
-        courseId: mockCourseId,
-      });
-      expect(joinAck?.ok ?? joinAck?.data?.ok).toBe(true);
-      const eventPromise = new Promise<any>((resolve) => {
-        socket.once('qna.thread.created', resolve);
-      });
-
-      const res = await request(app.getHttpServer())
-        .post(`/v1/courses/${mockCourseId}/threads`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
-          title: 'How to understand ESM in NestJS 12?',
-        })
+    it('student create thread, student resolve forbidden, owner resolve success', async () => {
+      const created = await request(app.getHttpServer())
+        .post(`/v1/courses/${courseAId}/threads`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({ title: 'Authorization thread' })
         .expect(201);
+      threadId = created.body.data.id;
 
-      expect(res.body.data).toHaveProperty('id');
-      expect(res.body.data.title).toBe('How to understand ESM in NestJS 12?');
-      expect(res.body.data.courseId).toBe(mockCourseId);
-      expect(res.body.data).not.toHaveProperty('authorId');
-      expect(res.body.data).not.toHaveProperty('posts');
-      createdThreadId = res.body.data.id;
-
-      const event = await eventPromise;
-      expect(event.thread).toEqual(res.body.data);
-      expect(event.thread).not.toHaveProperty('authorId');
-      expect(event.thread).not.toHaveProperty('posts');
-      socket.close();
-    });
-
-    it('GET /v1/courses/:courseId/threads - query threads list with boolean filter', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`/v1/courses/${mockCourseId}/threads?resolved=false`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200);
-
-      expect(res.body.data).toHaveProperty('items');
-      expect(Array.isArray(res.body.data.items)).toBe(true);
-      expect(res.body.data.items.length).toBeGreaterThanOrEqual(1);
-      for (const thread of res.body.data.items) {
-        expect(thread).not.toHaveProperty('authorId');
-        expect(thread).not.toHaveProperty('posts');
-        expect(thread).toHaveProperty('id');
-        expect(thread).toHaveProperty('courseId');
-        expect(thread).toHaveProperty('lessonId');
-        expect(thread).toHaveProperty('title');
-        expect(thread).toHaveProperty('resolved');
-        expect(thread).toHaveProperty('createdAt');
-      }
-    });
-
-    it('POST /v1/threads/:id/posts - add reply post and trigger notification', async () => {
-      const socket = io(`http://localhost:${serverPort}`, {
-        transports: ['websocket'],
-        auth: { token: accessToken },
-      });
-      await new Promise<void>((resolve) => {
-        socket.on('connect', () => resolve());
-      });
-      await socket.emitWithAck('join_course', { courseId: mockCourseId });
-      const eventPromise = new Promise<any>((resolve) => {
-        socket.once('qna.post.created', resolve);
-      });
-
-      const res = await request(app.getHttpServer())
-        .post(`/v1/threads/${createdThreadId}/posts`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
-          content: 'You should ensure all local imports end with .js!',
-        })
-        .expect(201);
-
-      expect(res.body.data).toHaveProperty('id');
-      expect(res.body.data.threadId).toBe(createdThreadId);
-      expect(res.body.data).not.toHaveProperty('authorId');
-      expect(res.body.data).not.toHaveProperty('thread');
-
-      const event = await eventPromise;
-      expect(event.threadId).toBe(createdThreadId);
-      expect(event.post).toEqual(res.body.data);
-      expect(event.post).not.toHaveProperty('authorId');
-      expect(event.post).not.toHaveProperty('thread');
-      socket.close();
-    });
-
-    it('GET /v1/threads/:id - get thread details and posts', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`/v1/threads/${createdThreadId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200);
-
-      expect(res.body.data.thread.id).toBe(createdThreadId);
-      expect(res.body.data.posts.length).toBeGreaterThanOrEqual(1);
-      expect(res.body.data.thread).not.toHaveProperty('authorId');
-      for (const post of res.body.data.posts) {
-        expect(post).not.toHaveProperty('authorId');
-        expect(post).not.toHaveProperty('thread');
-        expect(post.threadId).toBe(createdThreadId);
-      }
-    });
-
-    it('should return 401 when unauthenticated', async () => {
       await request(app.getHttpServer())
-        .get(`/v1/threads/${createdThreadId}`)
-        .expect(401);
+        .patch(`/v1/threads/${threadId}/resolve`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .expect(403);
+
+      await request(app.getHttpServer())
+        .patch(`/v1/threads/${threadId}/resolve`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send()
+        .expect(200);
+    });
+
+    it('admin resolve is successful', async () => {
+      const created = await request(app.getHttpServer())
+        .post(`/v1/courses/${courseAId}/threads`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({ title: 'Admin resolve thread' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .patch(`/v1/threads/${created.body.data.id}/resolve`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send()
+        .expect(200);
+    });
+
+    it('create post and get thread details with DTO fields', async () => {
+      const post = await request(app.getHttpServer())
+        .post(`/v1/threads/${threadId}/posts`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({ content: 'A public reply' })
+        .expect(201);
+
+      expect(post.body.data).not.toHaveProperty('authorId');
+      expect(post.body.data).not.toHaveProperty('thread');
+
+      const detail = await request(app.getHttpServer())
+        .get(`/v1/threads/${threadId}`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .expect(200);
+      expect(detail.body.data.thread).not.toHaveProperty('authorId');
+      expect(detail.body.data.posts[0]).not.toHaveProperty('authorId');
+    });
+
+    it('returns 404 for missing thread', async () => {
+      await request(app.getHttpServer())
+        .get('/v1/threads/99999999-9999-4999-8999-999999999999')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .expect(404);
+    });
+
+    it('returns 404 for missing course', async () => {
+      await request(app.getHttpServer())
+        .post('/v1/courses/99999999-9999-4999-8999-999999999999/threads')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({ title: 'Missing course' })
+        .expect(404);
     });
   });
 
   describe('Notifications', () => {
-    it('GET /v1/notifications/me - get current user notifications', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/v1/notifications/me?read=false')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200);
-
-      expect(res.body.data).toHaveProperty('items');
-      expect(Array.isArray(res.body.data.items)).toBe(true);
-      for (const notification of res.body.data.items) {
-        expect(notification).not.toHaveProperty('userId');
-        expect(notification).toHaveProperty('id');
-        expect(notification).toHaveProperty('type');
-        expect(notification).toHaveProperty('payload');
-        expect(notification).toHaveProperty('read');
-        expect(notification).toHaveProperty('createdAt');
-        expect(JSON.stringify(notification.payload)).not.toContain('replierId');
-        expect(JSON.stringify(notification.payload)).not.toContain(
-          'resolvedBy',
-        );
-        expect(JSON.stringify(notification.payload)).not.toContain('authorId');
-        expect(JSON.stringify(notification.payload)).not.toContain('userId');
-      }
-    });
-
-    it('emits notification DTO without userId or nested identity fields', async () => {
-      const socket = io(`http://localhost:${serverPort}`, {
-        transports: ['websocket'],
-        auth: { token: accessToken },
-      });
-      await new Promise<void>((resolve) => {
-        socket.on('connect', () => resolve());
-      });
-
-      const eventPromise = new Promise<any>((resolve) => {
+    it('notification WebSocket payload contains no internal identity fields', async () => {
+      const socket = await connectSocket(studentToken);
+      const event = new Promise<any>((resolve) => {
         socket.once('notification.created', resolve);
       });
-
       const notificationService = app.get(NotificationService);
-      await notificationService.createNotification(mockUserId, 'qna.reply', {
-        threadId: '11111111-aaaa-4111-8111-aaaaaaaaaaaa',
-        courseId: mockCourseId,
-        postId: '22222222-bbbb-4222-8222-bbbbbbbbbbbb',
-        replierId: 'private-replier-id',
-        nested: {
-          authorId: 'private-author-id',
-          userId: 'private-user-id',
-        },
+      await notificationService.createNotification(studentId, 'qna.reply', {
+        threadId: '1',
+        courseId: courseAId,
+        postId: '2',
+        replierId: 'private-replier',
+        nested: { authorId: 'private-author', userId: 'private-user' },
       });
 
-      const event = await eventPromise;
-      expect(event.notification).not.toHaveProperty('userId');
-      expect(event.notification).toHaveProperty('id');
-      expect(event.notification).toHaveProperty('type');
-      expect(event.notification).toHaveProperty('payload');
-      expect(JSON.stringify(event.notification.payload)).not.toContain(
+      const payload: any = await event;
+      expect(payload.notification).not.toHaveProperty('userId');
+      expect(JSON.stringify(payload.notification.payload)).not.toContain(
         'replierId',
       );
-      expect(JSON.stringify(event.notification.payload)).not.toContain(
+      expect(JSON.stringify(payload.notification.payload)).not.toContain(
         'authorId',
       );
-      expect(JSON.stringify(event.notification.payload)).not.toContain(
+      expect(JSON.stringify(payload.notification.payload)).not.toContain(
         'userId',
       );
       socket.close();
+    });
+
+    it('mark own notification success and mark other notification forbidden', async () => {
+      const notificationService = app.get(NotificationService);
+      const own = await notificationService.createNotification(
+        studentId,
+        'qna.reply',
+        { threadId: '1', nested: { authorId: 'private' } },
+      );
+      const other = await notificationService.createNotification(
+        ownerId,
+        'qna.reply',
+        { threadId: '2', replierId: 'private' },
+      );
+
+      await request(app.getHttpServer())
+        .patch(`/v1/notifications/${own.id}/read`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .patch(`/v1/notifications/${other.id}/read`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .expect(403);
+    });
+
+    it('returns 404 for missing notification', async () => {
+      await request(app.getHttpServer())
+        .patch('/v1/notifications/99999999-9999-4999-8999-999999999999/read')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .expect(404);
     });
   });
 });

@@ -71,7 +71,9 @@ NotificationResponse { id, type, payload, read, createdAt }
 WebSocket thread/post/notification emit cùng response DTO với REST. Catalog access phải fail closed:
 - Course không tồn tại → 404.
 - Chưa enroll hoặc không phải chủ khoá → 403.
-- Thiếu bảng/schema catalog hoặc database không thể xác minh quyền truy cập → 503/service unavailable.
+- Mọi lỗi DB/hạ tầng khi xác minh catalog → 503/service unavailable.
+- Trước mỗi broadcast course room, gateway revalidate từng socket; socket không còn quyền hoặc không thể xác minh quyền bị loại khỏi room.
+- Hướng revalidate hiện không cache để tránh quyền cũ: trade-off là nhiều truy vấn database theo số socket trong room; rollout đa-instance cần cân nhắc cache TTL ngắn.
 
 ## 8. Mã lỗi
 | Mã | Khi nào |

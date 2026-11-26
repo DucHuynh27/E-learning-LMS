@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -24,6 +25,8 @@ export interface QnaLesson {
 
 @Injectable()
 export class QnaCatalogAccess {
+  private readonly logger = new Logger(QnaCatalogAccess.name);
+
   constructor(@Inject(DataSource) private readonly source: DataSource) {}
 
   private async query<T>(
@@ -34,21 +37,34 @@ export class QnaCatalogAccess {
     return manager.query<T[]>(sql, params);
   }
 
-  private isCatalogUnavailableError(error: unknown): boolean {
-    if (typeof error !== 'object' || error === null || !('code' in error)) {
-      return false;
-    }
-    const code = (error as { code?: string }).code;
-    return code === '42P01' || code === '42P02' || code === '3F000';
-  }
-
   private catalogUnavailable(error: unknown): ServiceUnavailableException {
-    if (this.isCatalogUnavailableError(error)) {
-      return new ServiceUnavailableException(
-        'Catalog data is unavailable; cannot verify course access',
-      );
+    if (
+      error instanceof NotFoundException ||
+      error instanceof ForbiddenException ||
+      error instanceof ServiceUnavailableException
+    ) {
+      throw error;
     }
-    throw error;
+
+    let detail: string;
+    if (error instanceof Error) {
+      detail = `${error.name}: ${error.message}\n${error.stack ?? ''}`;
+    } else if (typeof error === 'object' && error !== null) {
+      try {
+        detail = JSON.stringify(error);
+      } catch {
+        detail = 'Unserializable catalog verification error';
+      }
+    } else {
+      detail = 'Unknown catalog verification error';
+    }
+    this.logger.error(
+      `Catalog verification failed: ${detail}`,
+      error instanceof Error ? error.stack : undefined,
+    );
+    return new ServiceUnavailableException(
+      'Catalog data is unavailable; cannot verify course access',
+    );
   }
 
   async findCourse(
