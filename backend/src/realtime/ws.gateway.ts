@@ -71,6 +71,7 @@ export class WsGateway implements OnGatewayConnection {
         email: payload.email,
         role: payload.role,
       };
+      client.data.user = client.user;
 
       await client.join(`user:${client.user.userId}`);
     } catch {
@@ -126,8 +127,49 @@ export class WsGateway implements OnGatewayConnection {
     return { ok: true };
   }
 
-  emitToCourse(courseId: string, event: string, payload: unknown) {
-    this.server?.to(`course:${courseId}`).emit(event, payload);
+  async emitToCourse(courseId: string, event: string, payload: unknown) {
+    if (!this.server) {
+      return;
+    }
+
+    const room = `course:${courseId}`;
+    let sockets;
+    try {
+      sockets = await this.server.in(room).fetchSockets();
+    } catch (error) {
+      this.logger.error(
+        `Cannot revalidate course room ${room}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return;
+    }
+
+    for (const socket of sockets) {
+      const user = (socket.data as { user?: AuthenticatedUser } | undefined)
+        ?.user;
+      if (!user) {
+        socket.leave(room);
+        continue;
+      }
+
+      try {
+        const { canAccess } = await this.catalogAccess.checkAccess(
+          courseId,
+          user,
+        );
+        if (!canAccess) {
+          socket.leave(room);
+        }
+      } catch {
+        this.logger.warn(
+          `Removing socket ${socket.id} from ${room} because access could not be verified`,
+        );
+        socket.leave(room);
+      }
+    }
+
+    this.server.to(room).emit(event, payload);
   }
 
   emitToUser(userId: string, event: string, payload: unknown) {

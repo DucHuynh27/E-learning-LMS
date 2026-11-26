@@ -63,7 +63,7 @@ jobs:
         run: |
           cp .env.example .env
           sed -i 's/^DB_USERNAME=.*/DB_USERNAME=lms/' .env
-          sed -i 's/^DB_NAME=.*/DB_NAME=lms/' .env
+          sed -i 's/^DB_NAME=.*/DB_NAME=lms_e2e/' .env
       - name: Bật hạ tầng
         # e2e hiện chỉ cần Postgres. Sẽ bổ sung redis/minio khi test cần dùng.
         run: docker compose up -d --wait --wait-timeout 90 postgres

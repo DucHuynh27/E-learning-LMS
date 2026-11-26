@@ -61,7 +61,7 @@ export class QnaService {
     });
     const saved = await this.threadRepo.save(thread);
 
-    this.wsGateway.emitToCourse(courseId, 'qna.thread.created', {
+    await this.wsGateway.emitToCourse(courseId, 'qna.thread.created', {
       thread: toThreadResponseDto(saved),
     });
 
@@ -141,7 +141,7 @@ export class QnaService {
     });
     const saved = await this.postRepo.save(post);
 
-    this.wsGateway.emitToCourse(thread.courseId, 'qna.post.created', {
+    await this.wsGateway.emitToCourse(thread.courseId, 'qna.post.created', {
       threadId,
       post: toPostResponseDto(saved),
     });

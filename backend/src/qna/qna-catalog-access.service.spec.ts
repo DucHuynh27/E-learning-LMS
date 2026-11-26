@@ -1,5 +1,9 @@
 import { DataSource } from 'typeorm';
-import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import { QnaCatalogAccess } from './qna-catalog-access.service.js';
 import { Role } from '../user/user.entity.js';
@@ -16,6 +20,40 @@ describe('QnaCatalogAccess fail-close authorization', () => {
       manager: {
         query: async () => {
           throw { code: '42P01', message: 'relation courses does not exist' };
+        },
+      },
+    } as unknown as DataSource;
+    const access = new QnaCatalogAccess(source);
+
+    await expect(
+      access.checkAccess('22222222-2222-4222-8222-222222222222', user),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it.each([
+    { code: '08006', message: 'connection failure' },
+    { code: '57P01', message: 'admin shutdown' },
+    { code: 'ETIMEDOUT', message: 'database timeout' },
+  ])('normalizes database catalog error $code to 503', async (error) => {
+    const source = {
+      manager: {
+        query: async () => {
+          throw error;
+        },
+      },
+    } as unknown as DataSource;
+    const access = new QnaCatalogAccess(source);
+
+    await expect(
+      access.checkAccess('22222222-2222-4222-8222-222222222222', user),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('normalizes ordinary Error database failures to 503', async () => {
+    const source = {
+      manager: {
+        query: async () => {
+          throw new Error('unexpected database failure');
         },
       },
     } as unknown as DataSource;
@@ -87,18 +125,27 @@ describe('QnaCatalogAccess fail-close authorization', () => {
     ).resolves.toEqual({ canAccess: false, isOwner: false });
   });
 
-  it('fails closed on a database error outside missing-catalog codes', async () => {
+  it('does not convert 403 enrollment denial into 503', async () => {
     const source = {
       manager: {
-        query: async () => {
-          throw new Error('database connection lost');
+        query: async (sql: string) => {
+          if (sql.includes('FROM "courses"')) {
+            return [
+              {
+                id: '22222222-2222-4222-8222-222222222222',
+                instructorId: '33333333-3333-4333-8333-333333333333',
+                status: 'PUBLISHED',
+              },
+            ];
+          }
+          return [];
         },
       },
     } as unknown as DataSource;
     const access = new QnaCatalogAccess(source);
 
     await expect(
-      access.checkAccess('22222222-2222-4222-8222-222222222222', user),
-    ).rejects.toThrow('database connection lost');
+      access.assertCanAccess('22222222-2222-4222-8222-222222222222', user),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
