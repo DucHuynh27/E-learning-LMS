@@ -73,15 +73,10 @@ export class ProgressService {
     return this.source.transaction('REPEATABLE READ', async (manager) => {
       await manager.query('SET TRANSACTION READ ONLY');
       await this.catalog.enrolment(user.userId, courseId, manager);
-      const lessons = await this.catalog.query<LessonProgress>(
+      const lessons = await this.catalog.courseLessons(
+        user.userId,
+        courseId,
         manager,
-        `
-        SELECT l."id" AS "lessonId", COALESCE(p."watchedSec", 0) AS "watchedSec",
-               COALESCE(p."completed", false) AS "completed", p."completedAt"
-        FROM "lessons" l JOIN "sections" s ON s."id" = l."sectionId"
-        LEFT JOIN "lesson_progress" p ON p."lessonId" = l."id" AND p."userId" = $1
-        WHERE s."courseId" = $2 AND l."isPublished" = true ORDER BY s."position", l."position", l."id"`,
-        [user.userId, courseId],
       );
       return {
         progressPct:
@@ -104,18 +99,7 @@ export class ProgressService {
     courseId: string,
     enrolmentId: string,
   ): Promise<number> {
-    const [row] = await this.catalog.query<{
-      total: number;
-      completed: number;
-    }>(
-      manager,
-      `
-      SELECT COUNT(*)::int AS "total", COUNT(*) FILTER (WHERE p."completed" = true)::int AS "completed"
-      FROM "lessons" l JOIN "sections" s ON s."id" = l."sectionId"
-      LEFT JOIN "lesson_progress" p ON p."lessonId" = l."id" AND p."userId" = $1
-      WHERE l."isPublished" = true AND s."courseId" = $2`,
-      [userId, courseId],
-    );
+    const row = await this.catalog.countCompleted(userId, courseId, manager);
     const progressPct =
       row.total === 0 ? 0 : Math.round((row.completed / row.total) * 100);
     // Rounding 199/200 gives 100, but a certificate still requires every published lesson.
