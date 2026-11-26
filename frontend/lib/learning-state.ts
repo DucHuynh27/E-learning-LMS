@@ -36,6 +36,19 @@ export function forgetAttempt(userId: string): void {
   }
 }
 
+export function forgetAllAttempts(userId: string): void {
+  forgetAttempt(userId);
+  try {
+    const storage = window.sessionStorage;
+    for (let index = storage.length - 1; index >= 0; index--) {
+      const key = storage.key(index);
+      if (key?.startsWith(`lms-attempt:${userId}:`)) storage.removeItem(key);
+    }
+  } catch {
+    /* Storage may be disabled by the browser. */
+  }
+}
+
 export function rememberAttempt(userId: string, attempt: Attempt): void {
   try {
     window.sessionStorage.setItem(

@@ -47,6 +47,19 @@ export class CoursesController {
     return this.coursesService.findAll(query, user);
   }
 
+  @Get('manage')
+  @Roles(Role.INSTRUCTOR, Role.ADMIN)
+  async findManaged(
+    @Query() query: CourseQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ items: CourseResponse[]; meta: { page: number; limit: number; total: number } }> {
+    const filters =
+      user.role === Role.INSTRUCTOR
+        ? { ...query, instructorId: user.userId }
+        : query;
+    return this.coursesService.findAll(filters, user);
+  }
+
   @Get(':id')
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,

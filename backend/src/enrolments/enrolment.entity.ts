@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  type Relation,
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
@@ -40,7 +41,7 @@ export class Enrolment {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'courseId' })
-  course?: Course;
+  course?: Relation<Course>;
 
   @Column({
     type: 'enum',

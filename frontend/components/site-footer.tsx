@@ -23,7 +23,7 @@ const footerColumns = [
 export function SiteFooter() {
   return (
     <footer className="border-t bg-muted/40">
-      <div className="max-w-6xl mx-auto px-4 py-16">
+      <div className="site-container py-10 sm:py-12">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/*Cột 1*/}
           <div className="flex flex-col gap-3">
@@ -31,8 +31,9 @@ export function SiteFooter() {
               <Image src="/logo.svg" alt="E-learning LMS" width={843} height={237} priority className="h-13 w-auto" />
             </Link>
 
-            <Text variant="sidebar" className="text-muted-foreground leading-relaxed">Nền tảng E-Learning hỗ trợ xử lý
-              Video & Real-time Q&A sử dùng Next.js và Nest.js</Text>
+            <Text variant="sidebar" className="text-muted-foreground leading-relaxed">
+              Nền tảng quản lý khóa học và theo dõi tiến độ học tập.
+            </Text>
           </div>
 
           {/*Cột 2 + 3*/}

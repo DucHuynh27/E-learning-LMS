@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -8,12 +9,10 @@ import {
   BookOpen,
   Check,
   CheckCircle2,
-  ChevronRight,
   Clock3,
   GraduationCap,
   LoaderCircle,
   LogIn,
-  LogOut,
   Play,
   RefreshCw,
   ShieldCheck,
@@ -31,6 +30,7 @@ import {
   type Session,
 } from "@/lib/learning-api";
 import { demoAccount, demoCourse } from "@/lib/learning-demo";
+import { useSession } from "@/components/session-provider";
 
 import {
   loadLearningSnapshot,
@@ -57,6 +57,8 @@ function messageFor(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 401)
       return "Thông tin đăng nhập chưa đúng hoặc phiên đã hết hạn. Vui lòng đăng nhập lại.";
+    if (error.status === 403)
+      return "Bạn cần ghi danh bằng tài khoản học viên để lưu tiến độ và làm quiz.";
     if (error.message.startsWith("Maximum of "))
       return "Bạn đã dùng hết lượt làm bài của quiz này.";
     if (error.message.includes("active attempt"))
@@ -74,7 +76,12 @@ function messageFor(error: unknown): string {
 }
 
 export function LearningDashboard() {
-  const [session, setSession] = useState<Session | null>(null);
+  const { session } = useSession();
+  return <LearningWorkspace key={session?.user.id ?? "guest"} />;
+}
+
+function LearningWorkspace() {
+  const { session, setSession } = useSession();
   const [email, setEmail] = useState(demoAccount.email);
   const [password, setPassword] = useState(demoAccount.password);
   const [progress, setProgress] = useState<CourseProgress>(emptyProgress);
@@ -110,6 +117,26 @@ export function LearningDashboard() {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [attempt]);
+
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    void loadLearningSnapshot(
+      session.accessToken,
+      demoCourse.id,
+      demoCourse.quizLessonId,
+    ).then((snapshot) => {
+      if (!active) return;
+      setProgress(snapshot.course);
+      setCertificates(snapshot.certificates);
+      setQuiz(snapshot.quiz);
+      setAttempt(restoreAttempt(session.user.id));
+      setNow(Date.now());
+    }).catch((caught: unknown) => {
+      if (active) setError(messageFor(caught));
+    });
+    return () => { active = false; };
+  }, [session]);
 
   async function loadSnapshot(token: string) {
     const snapshot = await loadLearningSnapshot(
@@ -152,25 +179,7 @@ export function LearningDashboard() {
         body: JSON.stringify({ email, password }),
       });
       setSession(data);
-      await loadSnapshot(data.accessToken);
-      setAttempt(restoreAttempt(data.user.id));
-      setNow(Date.now());
-      setNotice(`Chào ${data.user.fullName}, lớp học đã sẵn sàng.`);
     });
-  }
-
-  function signOut() {
-    if (session) forgetAttempt(session.user.id);
-    setSession(null);
-    setProgress(emptyProgress);
-    setCertificates([]);
-    setQuiz(null);
-    setAttempt(null);
-    setResult(null);
-    setAnswers({});
-    setDrafts({});
-    setError("");
-    setNotice("");
   }
 
   function saveProgress(lessonId: string, watchedSec: number) {
@@ -248,39 +257,12 @@ export function LearningDashboard() {
 
   return (
     <div className={css("learning-app")}>
-      <div className={css("dashboard-shell")}>
-        <div className={css("account-bar")}>
-          <span>{session ? session.user.fullName : "Không gian Learning"}</span>
-          {session && (
-            <button
-              className={css("button outline")}
-              onClick={signOut}
-              disabled={!!busy}
-            >
-              <LogOut size={16} />
-              Đăng xuất
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className={css("dashboard-shell")}>
-        <div className={css("breadcrumb")}>
-          Không gian học tập <ChevronRight size={14} />
-          <span>Learning demo</span>
-        </div>
+      <div className="site-container site-content">
         <section className={css("welcome-section")}>
           <div>
-            <p className={css("eyebrow")}>MỖI NGÀY, MỘT BƯỚC TIẾN</p>
-            <h1>
-              Học một chút.
-              <br />
-              Tiến xa hơn.
-            </h1>
+            <h1 className="site-title">Không gian học tập</h1>
             <p className={css("welcome-copy")}>
-              Tiếp tục bài học, kiểm tra kiến thức và ghi nhận
-              <br className={css("desktop-break")} /> từng cột mốc trên hành
-              trình của bạn.
+              Theo dõi tiến độ, làm quiz và tra cứu chứng chỉ của khóa học mẫu.
             </p>
             <a href="#lessons" className={css("text-link")}>
               Vào lớp học <ArrowRight size={17} />
@@ -426,6 +408,7 @@ export function LearningDashboard() {
           {error && (
             <div className={css("feedback error")} role="alert">
               {error}
+              {session && <Link href={`/courses/${demoCourse.id}`}>Xem thông tin ghi danh</Link>}
             </div>
           )}
           {notice && !error && (
@@ -783,17 +766,6 @@ export function LearningDashboard() {
           </div>
         </section>
 
-        <footer className={css("site-footer")}>
-          <span>
-            <BookOpen size={16} /> E-learning LMS{" "}
-            <span className={css("footer-separator")}>/</span> Không gian
-            Learning
-          </span>
-          <p>
-            Bản demo local · Course/Lesson dùng dữ liệu mẫu · Progress, Quiz và
-            Certificate dùng API NestJS thật.
-          </p>
-        </footer>
       </div>
     </div>
   );

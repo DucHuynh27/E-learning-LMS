@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  type Relation,
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
@@ -25,7 +26,7 @@ export class Section {
 
   @ManyToOne(() => Course, (course) => course.sections, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'courseId' })
-  course?: Course;
+  course?: Relation<Course>;
 
   @Column({ type: 'varchar', length: 200 })
   title: string;

@@ -52,6 +52,15 @@ export interface QuizResponse {
   questions: PublicQuestion[];
 }
 
+export interface ManagedQuizResponse extends Omit<QuizResponse, 'questions'> {
+  locked: boolean;
+  questions: {
+    id: string;
+    content: string;
+    options: { id: string; content: string; isCorrect: boolean }[];
+  }[];
+}
+
 export interface AttemptResultResponse {
   attemptId: string;
   score: number;
