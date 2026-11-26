@@ -163,6 +163,10 @@ describe('MediaAccessService', () => {
         student,
       ),
     ).resolves.toBeUndefined();
+    expect(query).toHaveBeenLastCalledWith(
+      expect.stringContaining(`e."status" IN ('ACTIVE', 'COMPLETED')`),
+      ['5df221d4-a89d-4608-bf1a-1827ba21c036', student.userId],
+    );
   });
 
   it('rejects playback when lesson or course is unpublished', async () => {

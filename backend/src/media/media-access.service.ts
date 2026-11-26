@@ -55,7 +55,7 @@ export class MediaAccessService {
     const enrollments = await this.dataSource.query<{ id: string }[]>(
       `SELECT e."id"
        FROM "enrolments" e
-       WHERE e."courseId" = $1 AND e."userId" = $2 AND e."status" = 'ACTIVE'
+       WHERE e."courseId" = $1 AND e."userId" = $2 AND e."status" IN ('ACTIVE', 'COMPLETED')
        LIMIT 1`,
       [lesson.courseId, user.userId],
     );
