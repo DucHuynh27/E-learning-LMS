@@ -37,12 +37,19 @@ export class ProgressService {
         userId: user.userId,
         lessonId: lesson.id,
       });
+      // Chỉ kẹp theo duration khi đã biết thời lượng. Lesson chưa có duration (0, ví dụ video
+      // chưa xử lý xong) không được coi là hoàn thành chỉ vì `0 >= 0`.
       const watchedSec = Math.max(
         previous?.watchedSec ?? 0,
-        Math.min(dto.watchedSec, lesson.durationSec),
+        lesson.durationSec > 0
+          ? Math.min(dto.watchedSec, lesson.durationSec)
+          : dto.watchedSec,
       );
       const completed =
-        Boolean(previous?.completed) || watchedSec >= lesson.durationSec * 0.9;
+        Boolean(previous?.completed) ||
+        (lesson.durationSec > 0
+          ? watchedSec >= lesson.durationSec * 0.9
+          : watchedSec > 0);
       const progress = await repository.save(
         repository.create({
           id: previous?.id,

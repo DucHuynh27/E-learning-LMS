@@ -43,7 +43,7 @@ export class CoursesController {
   async findAll(
     @Query() query: CourseQueryDto,
     @CurrentUser() user?: AuthenticatedUser,
-  ): Promise<{ items: CourseResponse[]; meta: { page: number; limit: number; total: number } }> {
+  ): Promise<{ items: CourseResponse[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
     return this.coursesService.findAll(query, user);
   }
 
@@ -52,7 +52,7 @@ export class CoursesController {
   async findManaged(
     @Query() query: CourseQueryDto,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<{ items: CourseResponse[]; meta: { page: number; limit: number; total: number } }> {
+  ): Promise<{ items: CourseResponse[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
     const filters =
       user.role === Role.INSTRUCTOR
         ? { ...query, instructorId: user.userId }
@@ -61,6 +61,7 @@ export class CoursesController {
   }
 
   @Get(':id')
+  @Public()
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,

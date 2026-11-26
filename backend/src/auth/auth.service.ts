@@ -11,6 +11,7 @@ import { User } from '../user/user.entity.js';
 import { UsersService } from '../user/users.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { JwtPayload } from './interfaces/jwt-payload.interface.js';
+import { isUniqueViolation } from '../common/db-errors.js';
 
 @Injectable()
 export class AuthService {
@@ -24,7 +25,15 @@ export class AuthService {
     if (await this.users.findByEmail(dto.email)) {
       throw new ConflictException('Email already registered');
     }
-    return this.issueTokens(await this.users.create(dto));
+    try {
+      return this.issueTokens(await this.users.create(dto));
+    } catch (error) {
+      // Hai đăng ký song song cùng email: unique index bắn 23505 → trả 409 thay vì 500.
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('Email already registered');
+      }
+      throw error;
+    }
   }
 
   async login(dto: LoginDto) {

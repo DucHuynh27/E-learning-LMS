@@ -213,6 +213,19 @@ describe(
       expect(await certificates.mine(student.userId)).toHaveLength(0);
     });
 
+    it('does not auto-complete a lesson with unknown duration (durationSec = 0)', async () => {
+      const [row] = await source.query(
+        `INSERT INTO "lessons" VALUES ($1, $2, 9, 0, true) RETURNING "id"`,
+        [randomUUID(), sectionId],
+      );
+      await progress.update(student, row.id, { watchedSec: 0 });
+      const [progressRow] = await source.query(
+        `SELECT "completed" FROM "lesson_progress" WHERE "lessonId" = $1 AND "userId" = $2`,
+        [row.id, student.userId],
+      );
+      expect(progressRow.completed).toBe(false);
+    });
+
     it('preserves completion on repeated writes without consulting Redis', async () => {
       for (const lessonId of lessons.slice(0, 2))
         await progress.update(student, lessonId, { watchedSec: 90 });

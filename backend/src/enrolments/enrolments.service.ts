@@ -14,6 +14,7 @@ import {
   toEnrolmentResponse,
 } from './dto/enrolment.response.js';
 import { Role } from '../user/user.entity.js';
+import { isUniqueViolation } from '../common/db-errors.js';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
 
 @Injectable()
@@ -53,14 +54,22 @@ export class EnrolmentsService {
       progressPct: 0,
     });
 
-    const saved = await this.enrolmentRepo.save(enrolment);
-    return toEnrolmentResponse(saved);
+    try {
+      const saved = await this.enrolmentRepo.save(enrolment);
+      return toEnrolmentResponse(saved);
+    } catch (error) {
+      // Hai enroll song song cùng user/course: unique index bắn 23505 → 409 thay vì 500.
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('Already enrolled in this course');
+      }
+      throw error;
+    }
   }
 
   async findMyEnrolments(
     user: AuthenticatedUser,
     query: EnrolmentQueryDto,
-  ): Promise<{ items: EnrolmentResponse[]; meta: { page: number; limit: number; total: number } }> {
+  ): Promise<{ items: EnrolmentResponse[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
@@ -73,7 +82,7 @@ export class EnrolmentsService {
 
     return {
       items: items.map(toEnrolmentResponse),
-      meta: { page, limit, total },
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
 
@@ -81,7 +90,7 @@ export class EnrolmentsService {
     courseId: string,
     user: AuthenticatedUser,
     query: EnrolmentQueryDto,
-  ): Promise<{ items: EnrolmentResponse[]; meta: { page: number; limit: number; total: number } }> {
+  ): Promise<{ items: EnrolmentResponse[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
     const course = await this.courseRepo.findOne({ where: { id: courseId } });
     if (!course) {
       throw new NotFoundException('Course not found');
@@ -108,7 +117,7 @@ export class EnrolmentsService {
 
     return {
       items: items.map(toEnrolmentResponse),
-      meta: { page, limit, total },
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
 }

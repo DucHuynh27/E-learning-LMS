@@ -63,7 +63,7 @@ export class CoursesService {
   async findAll(
     query: CourseQueryDto,
     user?: AuthenticatedUser,
-  ): Promise<{ items: CourseResponse[]; meta: { page: number; limit: number; total: number } }> {
+  ): Promise<{ items: CourseResponse[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
@@ -118,7 +118,7 @@ export class CoursesService {
 
     return {
       items: items.map(toCourseResponse),
-      meta: { page, limit, total },
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
 
@@ -215,13 +215,13 @@ export class CoursesService {
     }
 
     const sectionIds = sections.map((s) => s.id);
-    const lessonsCount = await this.lessonRepo.count({
-      where: { sectionId: In(sectionIds) },
+    const publishedLessonsCount = await this.lessonRepo.count({
+      where: { sectionId: In(sectionIds), isPublished: true },
     });
 
-    if (lessonsCount === 0) {
+    if (publishedLessonsCount === 0) {
       throw new ConflictException(
-        'Course must have at least one section and one lesson to publish',
+        'Course must have at least one section and one published lesson to publish',
       );
     }
 
