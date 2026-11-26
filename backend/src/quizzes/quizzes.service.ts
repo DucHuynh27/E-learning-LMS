@@ -9,6 +9,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface.js';
 import { CatalogAccess } from '../learning/catalog-access.service.js';
 import type {
+  ManagedQuizResponse,
   PublicQuestion,
   QuizResponse,
 } from '../learning/learning.responses.js';
@@ -37,6 +38,37 @@ export class QuizzesService {
         this.catalog.assertPublished(lesson);
       const quiz = await this.forLesson(manager, lesson.id);
       return this.response(manager, quiz);
+    });
+  }
+
+  async getManaged(
+    user: AuthenticatedUser,
+    lessonId: string,
+  ): Promise<ManagedQuizResponse> {
+    return this.source.transaction('REPEATABLE READ', async (manager) => {
+      const lesson = await this.catalog.lesson(lessonId, manager);
+      this.catalog.assertOwner(lesson, user);
+      const quiz = await this.forLesson(manager, lesson.id);
+      const questions = await this.questions(manager, quiz.id);
+      const locked = await manager.getRepository(QuizAttempt).existsBy({
+        quizId: quiz.id,
+      });
+      return {
+        id: quiz.id,
+        lessonId: quiz.lessonId,
+        passScore: quiz.passScore,
+        timeLimitSec: quiz.timeLimitSec,
+        locked,
+        questions: questions.map(({ id, content, options }) => ({
+          id,
+          content,
+          options: options.map(({ id, content, isCorrect }) => ({
+            id,
+            content,
+            isCorrect,
+          })),
+        })),
+      };
     });
   }
 

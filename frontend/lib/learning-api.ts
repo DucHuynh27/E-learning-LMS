@@ -4,6 +4,10 @@ export interface Session {
   user: { id: string; fullName: string; email: string; role: string };
 }
 
+export function canManageCourses(session: Session | null): boolean {
+  return session?.user.role === "INSTRUCTOR" || session?.user.role === "ADMIN";
+}
+
 export interface LessonProgress {
   lessonId: string;
   watchedSec: number;
@@ -77,15 +81,21 @@ export async function api<T>(
   } catch {
     throw new Error("Chưa kết nối được backend. Vui lòng thử lại sau.");
   }
-  const payload = await response.json().catch(() => ({}));
+  const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    const message = Array.isArray(payload.message)
+    if (response.status >= 500 && !payload) {
+      throw new ApiError(
+        "Không kết nối được máy chủ LMS. Hãy kiểm tra backend NestJS đang chạy rồi thử lại.",
+        response.status,
+      );
+    }
+    const message = Array.isArray(payload?.message)
       ? payload.message.join(" · ")
-      : payload.message;
+      : payload?.message;
     throw new ApiError(
       message || `Yêu cầu không thành công (${response.status}).`,
       response.status,
     );
   }
-  return payload.data as T;
+  return payload?.data as T;
 }

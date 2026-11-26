@@ -29,6 +29,7 @@
 | PATCH | `/v1/lessons/:lessonId/progress` | enrolled STUDENT | `{ watchedSec }` | 200 `LessonProgressResponse` |
 | GET | `/v1/enrolments/:courseId/progress` | STUDENT (của mình) | — | 200 `{ progressPct, lessons:[...] }` |
 | GET | `/v1/lessons/:lessonId/quiz` | Auth | — | 200 `QuizResponse` (không có đáp án đúng) |
+| GET | `/v1/lessons/:lessonId/quiz/manage` | owner INSTRUCTOR / ADMIN | — | 200 `ManagedQuizResponse` có `isCorrect` và trạng thái `locked` |
 | POST | `/v1/lessons/:lessonId/quiz` | owner INSTRUCTOR / ADMIN | `CreateQuizDto` | 201 `QuizResponse` |
 | PUT | `/v1/lessons/:lessonId/quiz` | owner INSTRUCTOR / ADMIN | `CreateQuizDto` (thay toàn bộ) | 200 `QuizResponse` |
 | POST | `/v1/lessons/:lessonId/quiz/attempts` | enrolled STUDENT | — | 201 `{ attemptId, questions, startedAt, expiresAt }` |

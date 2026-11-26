@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  type Relation,
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
@@ -29,7 +30,7 @@ export class Lesson {
 
   @ManyToOne(() => Section, (section) => section.lessons, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'sectionId' })
-  section?: Section;
+  section?: Relation<Section>;
 
   @Column({ type: 'varchar', length: 200 })
   title: string;

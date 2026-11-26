@@ -5,7 +5,7 @@ import {type ComponentProps} from "react";
 const headingVariants = cva("", {
   variants: {
     level: {
-      h1: "text-4xl font-bold",
+      h1: "site-title",
       h2: "text-[28px] font-semibold",
       h3: "text-[22px] font-semibold",
     },

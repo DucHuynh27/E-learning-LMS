@@ -301,6 +301,22 @@ describe(
         .expect(409);
     });
 
+    it('shows the answer key only to quiz managers and reports when editing is locked', async () => {
+      await createQuiz();
+      const path = `/v1/lessons/${lessons[0]}/quiz`;
+      await server().get(`${path}/manage`).expect(401);
+      await server().get(`${path}/manage`).set('Authorization', bearer(student)).expect(403);
+      await server().get(`${path}/manage`).set('Authorization', bearer(otherTeacher)).expect(403);
+      const publicQuiz = await server().get(path).set('Authorization', bearer(student)).expect(200);
+      expect(JSON.stringify(publicQuiz.body)).not.toContain('isCorrect');
+      const managed = await server().get(`${path}/manage`).set('Authorization', bearer(teacher)).expect(200);
+      expect(managed.body.data.locked).toBe(false);
+      expect(managed.body.data.questions[0].options.map((option: { isCorrect: boolean }) => option.isCorrect)).toEqual([true, false]);
+      await start();
+      const locked = await server().get(`${path}/manage`).set('Authorization', bearer(admin)).expect(200);
+      expect(locked.body.data.locked).toBe(true);
+    });
+
     it('allows draft preview only for the owner and admin', async () => {
       await createQuiz();
       await source.query(

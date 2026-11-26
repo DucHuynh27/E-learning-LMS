@@ -32,6 +32,15 @@ export class QuizzesController {
     return this.quizzes.get(user, params.lessonId);
   }
 
+  @Get('manage')
+  @Roles(Role.INSTRUCTOR, Role.ADMIN)
+  getManaged(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: LessonParamsDto,
+  ) {
+    return this.quizzes.getManaged(user, params.lessonId);
+  }
+
   @Roles(Role.INSTRUCTOR, Role.ADMIN)
   @Post()
   create(
