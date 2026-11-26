@@ -13,6 +13,9 @@ const nextConfig = (phase: string): NextConfig => ({
   },
   cacheComponents: true,
   partialPrefetching: true,
+  // Cho phép mở dev server qua 127.0.0.1 (mặc định Next chỉ nhận localhost) — tránh chặn
+  // dev resource khiến trang không hydrate (đăng nhập hỏng). Chỉ ảnh hưởng môi trường dev.
+  allowedDevOrigins: ["127.0.0.1"],
   turbopack: {
     root: process.cwd(),
     rules: {

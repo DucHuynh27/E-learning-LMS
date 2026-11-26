@@ -36,12 +36,11 @@ export class CatalogAccess {
     try {
       return await manager.query<T[]>(sql, params);
     } catch (error) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === '42P01'
-      ) {
+      const code =
+        typeof error === 'object' && error !== null && 'code' in error
+          ? (error as { code?: string }).code
+          : undefined;
+      if (code === '42P01' || code === '42P02' || code === '3F000') {
         throw new ServiceUnavailableException(
           'Catalog schema is not installed; run the Content migrations first',
         );

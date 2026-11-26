@@ -31,7 +31,7 @@ export class EnrolmentsController {
   async findMyEnrolments(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: EnrolmentQueryDto,
-  ): Promise<{ items: EnrolmentResponse[]; meta: { page: number; limit: number; total: number } }> {
+  ): Promise<{ items: EnrolmentResponse[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
     return this.enrolmentsService.findMyEnrolments(user, query);
   }
 
@@ -41,7 +41,7 @@ export class EnrolmentsController {
     @Param('courseId', ParseUUIDPipe) courseId: string,
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: EnrolmentQueryDto,
-  ): Promise<{ items: EnrolmentResponse[]; meta: { page: number; limit: number; total: number } }> {
+  ): Promise<{ items: EnrolmentResponse[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
     return this.enrolmentsService.findCourseEnrolments(courseId, user, query);
   }
 }
