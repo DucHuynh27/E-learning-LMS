@@ -116,8 +116,9 @@ describe('EnrolmentsService', () => {
 
   describe('findMyEnrolments', () => {
     it('returns paginated enrolments for student', async () => {
+      const enrolment = createEnrolment({ course: createCourse() });
       vi.mocked(enrolmentRepo.findAndCount!).mockResolvedValue([
-        [createEnrolment()],
+        [enrolment],
         1,
       ]);
 
@@ -128,6 +129,13 @@ describe('EnrolmentsService', () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.meta.total).toBe(1);
+      expect(result.items[0].course).toEqual({
+        title: 'Published Course',
+        status: CourseStatus.PUBLISHED,
+      });
+      expect(enrolmentRepo.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ relations: { course: true } }),
+      );
     });
   });
 

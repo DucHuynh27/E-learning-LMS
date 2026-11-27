@@ -37,7 +37,11 @@ export async function createHttpTestDatabase(): Promise<DataSource> {
         "createdAt" timestamptz NOT NULL DEFAULT now(), "updatedAt" timestamptz NOT NULL DEFAULT now());
       CREATE TYPE "fixture_course_status" AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
       CREATE TYPE "fixture_enrolment_status" AS ENUM ('ACTIVE', 'COMPLETED', 'EXPIRED');
-      CREATE TABLE "courses" ("id" uuid PRIMARY KEY, "instructorId" uuid NOT NULL REFERENCES "users"("id"), "status" "fixture_course_status" NOT NULL);
+      CREATE TABLE "courses" (
+        "id" uuid PRIMARY KEY, "title" varchar(200) NOT NULL, "slug" varchar(255) NOT NULL UNIQUE,
+        "description" text, "thumbnailKey" varchar(512), "priceCents" integer NOT NULL DEFAULT 0,
+        "instructorId" uuid NOT NULL REFERENCES "users"("id"), "status" "fixture_course_status" NOT NULL,
+        "createdAt" timestamptz NOT NULL DEFAULT now(), "updatedAt" timestamptz NOT NULL DEFAULT now());
       CREATE TABLE "sections" ("id" uuid PRIMARY KEY, "courseId" uuid NOT NULL REFERENCES "courses"("id") ON DELETE CASCADE, "position" integer NOT NULL);
       CREATE TABLE "lessons" ("id" uuid PRIMARY KEY, "sectionId" uuid NOT NULL REFERENCES "sections"("id") ON DELETE CASCADE,
         "content" text, "position" integer NOT NULL, "durationSec" integer NOT NULL, "isPublished" boolean NOT NULL);

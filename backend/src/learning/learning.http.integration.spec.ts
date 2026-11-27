@@ -147,22 +147,24 @@ describe(
       courseId = randomUUID();
       const sectionId = randomUUID();
       lessons = [randomUUID(), randomUUID(), randomUUID()];
-      await source.query('INSERT INTO "courses" VALUES ($1, $2, $3)', [
-        courseId,
-        teacher.id,
-        'PUBLISHED',
-      ]);
+      await source.query(
+        'INSERT INTO "courses" ("id", "title", "slug", "instructorId", "status") VALUES ($1, $2, $3, $4, $5)',
+        [courseId, 'HTTP integration course', courseId, teacher.id, 'PUBLISHED'],
+      );
       await source.query('INSERT INTO "sections" VALUES ($1, $2, 0)', [
         sectionId,
         courseId,
       ]);
       for (const [position, id] of lessons.entries())
-        await source.query('INSERT INTO "lessons" VALUES ($1, $2, $3, 100, $4)', [
-          id,
-          sectionId,
-          position,
-          position < 2,
-        ]);
+        await source.query(
+          'INSERT INTO "lessons" ("id", "sectionId", "position", "durationSec", "isPublished") VALUES ($1, $2, $3, 100, $4)',
+          [
+            id,
+            sectionId,
+            position,
+            position < 2,
+          ],
+        );
       await source.query(
         'INSERT INTO "enrolments" ("userId", "courseId") VALUES ($1, $2)',
         [student.id, courseId],
