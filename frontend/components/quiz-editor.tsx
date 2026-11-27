@@ -33,7 +33,7 @@ function newQuestion(): DraftQuestion {
   return {
     id: crypto.randomUUID(),
     content: "",
-    options: [newOption(), newOption()],
+    options: [newOption(), newOption(), newOption(), newOption()],
   };
 }
 
@@ -147,6 +147,31 @@ function QuizForm({
       setError("Điền nội dung cho tất cả câu hỏi và lựa chọn.");
       return;
     }
+    if (payload.some((question) => question.content.length < 30)) {
+      setError(
+        "Mỗi câu hỏi cần ít nhất 30 ký tự để nêu rõ bối cảnh và yêu cầu đánh giá.",
+      );
+      return;
+    }
+    if (
+      payload.some((question) =>
+        question.options.some((option) => option.content.length < 3),
+      )
+    ) {
+      setError("Mỗi lựa chọn cần ít nhất 3 ký tự và phải diễn đạt rõ ràng.");
+      return;
+    }
+    if (
+      payload.some((question) => {
+        const options = question.options.map((option) =>
+          option.content.toLocaleLowerCase("vi"),
+        );
+        return new Set(options).size !== options.length;
+      })
+    ) {
+      setError("Không dùng các lựa chọn trùng lặp trong cùng một câu hỏi.");
+      return;
+    }
     if (
       payload.some(
         (question) => !question.options.some((option) => option.isCorrect),
@@ -192,7 +217,14 @@ function QuizForm({
       onSubmit={submit}
       className="space-y-4 rounded-lg border bg-muted/25 p-3 sm:p-4"
     >
-      <h4 className="font-semibold">Câu hỏi trắc nghiệm</h4>
+      <div>
+        <h4 className="font-semibold">Câu hỏi trắc nghiệm</h4>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+          Xây dựng câu hỏi theo mục tiêu học tập: nêu bối cảnh cụ thể, đặt một
+          yêu cầu đánh giá rõ ràng và dùng các phương án nhiễu hợp lý. Mỗi câu
+          hỏi cần có ít nhất 30 ký tự; tránh câu hỏi chỉ yêu cầu ghi nhớ máy móc.
+        </p>
+      </div>
       {locked && (
         <p className="text-sm text-muted-foreground">
           Quiz đã có lượt làm bài và được khóa chỉnh sửa.
@@ -232,12 +264,14 @@ function QuizForm({
               Câu {index + 1}
             </legend>
             <label className="grid gap-2 text-sm font-medium">
-              Nội dung câu hỏi
+              Nội dung câu hỏi ({question.content.length}/5000)
               <textarea
                 required
+                minLength={30}
                 maxLength={5000}
-                className="min-h-18 rounded-lg border border-input bg-background p-2 text-sm"
+                className="min-h-24 rounded-lg border border-input bg-background p-3 text-sm leading-6"
                 value={question.content}
+                placeholder="Mô tả một tình huống thực tế, sau đó hỏi người học cần phân tích hoặc lựa chọn giải pháp nào."
                 onChange={(event) =>
                   editQuestion(question.id, (item) => ({
                     ...item,
@@ -252,7 +286,7 @@ function QuizForm({
                   key={option.id}
                   className="flex flex-wrap items-center gap-2"
                 >
-                  <label className="flex items-center gap-1 text-xs">
+                  <label className="flex items-center gap-1.5 text-xs">
                     <input
                       type="radio"
                       name={`correct-${question.id}`}
@@ -270,14 +304,15 @@ function QuizForm({
                         }))
                       }
                     />
-                    Đúng
+                    Đáp án đúng
                   </label>
                   <Input
                     className="min-w-20 flex-1"
                     required
+                    minLength={3}
                     maxLength={2000}
                     aria-label={`Lựa chọn ${optionIndex + 1} của câu ${index + 1}`}
-                    placeholder={`Lựa chọn ${optionIndex + 1}`}
+                    placeholder={`Phương án ${optionIndex + 1}`}
                     value={option.content}
                     onChange={(event) =>
                       editQuestion(question.id, (item) => ({

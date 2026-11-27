@@ -6,6 +6,7 @@ import { CatalogAccess } from '../dist/learning/catalog-access.service.js';
 import { QuizzesService } from '../dist/quizzes/quizzes.service.js';
 import { Quiz } from '../dist/quizzes/quiz.entity.js';
 import { Learning1794050000000 } from '../dist/database/migrations/1794050000000-Learning.js';
+import { AddLessonTheory1795300000000 } from '../dist/database/migrations/1795300000000-AddLessonTheory.js';
 
 const catalog = process.argv.includes('--catalog');
 const schema = catalog ? 'public' : 'learning_demo';
@@ -23,7 +24,7 @@ const source = new AppDataSource.constructor({
   ...(catalog
     ? {}
     : {
-        migrations: [Learning1794050000000],
+        migrations: [Learning1794050000000, AddLessonTheory1795300000000],
         migrationsTableName: 'learning_migrations',
       }),
   synchronize: false,
@@ -151,17 +152,128 @@ try {
         questions: [
           {
             content:
-              'Lesson hoàn thành khi watchedSec đạt bao nhiêu phần trăm duration?',
+              'Một bài học dài 10 phút chỉ được tính hoàn thành khi người học đã xem ít nhất 90% thời lượng. Hệ thống nên kiểm tra điều kiện nào trước khi cập nhật tiến độ?',
             options: [
-              { content: '90%', isCorrect: true },
-              { content: '50%', isCorrect: false },
+              {
+                content:
+                  'watchedSec đạt ít nhất 540 giây so với durationSec là 600 giây',
+                isCorrect: true,
+              },
+              {
+                content:
+                  'Người học đã mở trang bài học trong ít nhất 90 giây',
+                isCorrect: false,
+              },
+              {
+                content:
+                  'Trình duyệt gửi giá trị completed là true trong request',
+                isCorrect: false,
+              },
             ],
           },
           {
-            content: 'Điểm quiz được tính ở đâu?',
+            content:
+              'Một học viên sửa request trên trình duyệt để gửi điểm quiz là 100%. Cách thiết kế nào bảo đảm kết quả không bị giả mạo?',
             options: [
-              { content: 'Trên server', isCorrect: true },
-              { content: 'Trong trình duyệt', isCorrect: false },
+              {
+                content:
+                  'Server đối chiếu các lựa chọn đã nộp với đáp án đúng và tự tính điểm',
+                isCorrect: true,
+              },
+              {
+                content:
+                  'Giao diện ẩn điểm cho đến khi học viên tải lại trang',
+                isCorrect: false,
+              },
+              {
+                content:
+                  'Server chấp nhận điểm do trình duyệt gửi nếu request dùng HTTPS',
+                isCorrect: false,
+              },
+            ],
+          },
+          {
+            content:
+              'Một request cập nhật tiến độ gửi lessonId không thuộc khóa học học viên đã ghi danh. Backend nên xử lý thế nào để bảo vệ ranh giới truy cập?',
+            options: [
+              {
+                content:
+                  'Xác thực quyền truy cập của học viên với bài học trước khi ghi nhận tiến độ',
+                isCorrect: true,
+              },
+              {
+                content:
+                  'Lưu tiến độ trước rồi để giao diện ẩn bài học khỏi danh sách',
+                isCorrect: false,
+              },
+              {
+                content:
+                  'Chỉ kiểm tra lessonId có đúng định dạng UUID hay không',
+                isCorrect: false,
+              },
+            ],
+          },
+          {
+            content:
+              'Khi người học tải lại trang trong lúc làm quiz có giới hạn thời gian, nguồn nào nên được dùng để khôi phục thời hạn chính xác?',
+            options: [
+              {
+                content:
+                  'Thời điểm expiresAt do server lưu và trả về cho lượt làm bài',
+                isCorrect: true,
+              },
+              {
+                content:
+                  'Thời gian còn lại được đếm lại từ đầu trong trình duyệt',
+                isCorrect: false,
+              },
+              {
+                content:
+                  'Giá trị đồng hồ máy tính của người học tại thời điểm tải lại',
+                isCorrect: false,
+              },
+            ],
+          },
+          {
+            content:
+              'Một API đăng ký tài khoản nhận email sai định dạng. Tại lớp nào nên kiểm tra dữ liệu để trả lỗi nhất quán trước khi chạy nghiệp vụ?',
+            options: [
+              {
+                content:
+                  'DTO kết hợp ValidationPipe tại ranh giới HTTP của ứng dụng',
+                isCorrect: true,
+              },
+              {
+                content:
+                  'Chỉ kiểm tra thuộc tính input required trong trình duyệt',
+                isCorrect: false,
+              },
+              {
+                content:
+                  'Lưu tài khoản trước rồi xóa nếu người dùng báo có lỗi',
+                isCorrect: false,
+              },
+            ],
+          },
+          {
+            content:
+              'Hai request ghi danh đồng thời được gửi cho cùng một học viên và khóa học. Cơ chế nào bảo vệ dữ liệu khỏi tạo hai bản ghi?',
+            options: [
+              {
+                content:
+                  'Ràng buộc duy nhất trên userId và courseId cùng xử lý xung đột ở server',
+                isCorrect: true,
+              },
+              {
+                content:
+                  'Ẩn nút ghi danh sau lần nhấn đầu tiên trên giao diện',
+                isCorrect: false,
+              },
+              {
+                content:
+                  'Thêm thời gian chờ ngẫu nhiên trước khi lưu cả hai request',
+                isCorrect: false,
+              },
             ],
           },
         ],

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import type { CourseSummary } from "@/components/course-catalog";
+import { CourseLogo } from "@/components/course-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/learning-api";
@@ -40,6 +41,12 @@ export function CourseForm({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [title, setTitle] = useState(course?.title ?? "");
+  const [description, setDescription] = useState(course?.description ?? "");
+  const [paid, setPaid] = useState((course?.priceCents ?? 0) > 0);
+  const [priceInput, setPriceInput] = useState(
+    course?.priceCents ? String(course.priceCents) : "",
+  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,13 +54,20 @@ export function CourseForm({
     const fields = new FormData(event.currentTarget);
     const title = String(fields.get("title")).trim();
     const slug = course ? String(fields.get("slug")).trim() : undefined;
-    const priceCents = Number(fields.get("priceCents"));
+    const priceCents = paid ? Number(priceInput) : 0;
     if (!title) {
       setError("Nhập tên khóa học.");
       return;
     }
     if (course && !slug) {
       setError("Nhập slug cho khóa học.");
+      return;
+    }
+    if (
+      paid &&
+      (!Number.isSafeInteger(priceCents) || priceCents <= 0)
+    ) {
+      setError("Nhập mức học phí lớn hơn 0.");
       return;
     }
     setBusy(true);
@@ -74,13 +88,26 @@ export function CourseForm({
 
   return (
     <form onSubmit={submit} className="grid gap-4">
+      <div className="flex items-center gap-4 rounded-lg border bg-muted/25 p-4">
+        <CourseLogo
+          title={title.trim() || "Khóa học mới"}
+          className="w-16 shrink-0"
+        />
+        <div>
+          <p className="font-medium">Nhận diện khóa học</p>
+          <p className="text-sm text-muted-foreground">
+            Logo monogram được tạo tự động từ tên khóa học.
+          </p>
+        </div>
+      </div>
       <label className="grid gap-2 text-sm font-medium">
         Tên khóa học
         <Input
           name="title"
           required
           maxLength={200}
-          defaultValue={course?.title}
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
           placeholder="Ví dụ: Nhập môn TypeScript"
         />
       </label>
@@ -101,22 +128,54 @@ export function CourseForm({
           className="min-h-24 rounded-lg border border-input bg-background p-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           name="description"
           maxLength={5000}
-          defaultValue={course?.description ?? ""}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
           placeholder="Mục tiêu, nội dung chính và đối tượng phù hợp với khóa học"
         />
+        <span className="text-right text-xs font-normal text-muted-foreground">
+          {description.length}/5000 ký tự
+        </span>
       </label>
-      <label className="grid max-w-52 gap-2 text-sm font-medium">
-        Giá (cent, 0 là miễn phí)
-        <Input
-          name="priceCents"
-          type="number"
-          required
-          min={0}
-          max={2147483647}
-          step={1}
-          defaultValue={course?.priceCents ?? 0}
-        />
-      </label>
+      <fieldset className="grid gap-2">
+        <legend className="text-sm font-medium">Học phí</legend>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant={paid ? "outline" : "default"}
+            aria-pressed={!paid}
+            onClick={() => setPaid(false)}
+          >
+            Miễn phí
+          </Button>
+          <Button
+            type="button"
+            variant={paid ? "default" : "outline"}
+            aria-pressed={paid}
+            onClick={() => setPaid(true)}
+          >
+            Có học phí
+          </Button>
+        </div>
+        {paid ? (
+          <label className="grid max-w-64 gap-2 text-sm font-medium">
+            Mức học phí (cent)
+            <Input
+              name="priceCents"
+              type="number"
+              required
+              min={1}
+              max={2147483647}
+              step={1}
+              value={priceInput}
+              onChange={(event) => setPriceInput(event.target.value)}
+            />
+          </label>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Học viên có thể ghi danh khóa học miễn phí.
+          </p>
+        )}
+      </fieldset>
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}

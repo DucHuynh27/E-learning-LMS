@@ -1,6 +1,6 @@
 # Dữ liệu danh mục khóa học mẫu
 
-`demo-catalog.sql` chứa 40 khóa học miễn phí đã xuất bản, 80 chương và 160 đề mục bài học bằng tiếng Việt. Dữ liệu bao phủ lập trình, thiết kế, phân tích dữ liệu, kỹ năng nghề nghiệp và kỹ năng học tập. Khóa mẫu dùng để thử quiz và chứng chỉ được tạo riêng bằng seed Learning.
+`demo-catalog.sql` chứa 40 khóa học miễn phí đã xuất bản, 80 chương, 160 bài đọc có lý thuyết và quiz tiếng Việt cho mọi khóa. Mỗi quiz có 10 câu hỏi theo nhóm chủ đề; các khóa NestJS, SQL/PostgreSQL và Git/GitHub có thêm câu hỏi chuyên biệt, tổng cộng 10–13 câu. Khóa demo Learning có sẵn tài khoản học viên và được tạo riêng bằng seed Learning.
 
 ## Nạp trên Windows
 
@@ -23,4 +23,4 @@ SELECT count(*) FROM public.courses
 WHERE "instructorId" = '70b790d0-f72d-4eb4-929f-d58b003afe1e';
 ```
 
-Có thể nạp lại seed. Lệnh thêm bản ghi mẫu còn thiếu và giữ nguyên các bản ghi đã có. Mỗi khóa học có hai chương và bốn đề mục bài học, đủ để thử danh mục và ghi danh qua API. Các tài khoản học viên được tạo khi người dùng đăng ký trên máy local.
+Có thể nạp lại seed. Lệnh thêm bản ghi mẫu còn thiếu và giữ nguyên các khóa và quiz đã có. Các tài khoản học viên được tạo khi người dùng đăng ký trên máy local.

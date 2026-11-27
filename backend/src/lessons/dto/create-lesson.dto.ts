@@ -19,6 +19,11 @@ export class CreateLessonDto {
   title: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(20000)
+  content?: string | null;
+
+  @IsOptional()
   @IsEnum(LessonType)
   type?: LessonType;
 

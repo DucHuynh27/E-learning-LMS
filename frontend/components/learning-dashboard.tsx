@@ -30,6 +30,7 @@ import {
 } from "@/lib/learning-api";
 import { demoAccount, demoCourse } from "@/lib/learning-demo";
 import { useSession } from "@/components/session-provider";
+import { CertificateCard } from "@/components/certificate-card";
 
 import {
   loadLearningSnapshot,
@@ -710,56 +711,34 @@ function LearningWorkspace() {
           </section>
         </div>
 
-        <section id="certificates" className={css("certificate-section")}>
+        {courseCertificates.length && session ? (
+          <div id="certificates">
+            {courseCertificates.map((certificate) => (
+              <CertificateCard
+                key={certificate.serialNo}
+                courseTitle={demoCourse.title}
+                studentName={session.user.fullName}
+                serialNo={certificate.serialNo}
+                issuedAt={certificate.issuedAt}
+              />
+            ))}
+          </div>
+        ) : <section id="certificates" className={css("certificate-section")}>
           <div className={css("certificate-symbol")}>
             <Award size={34} />
           </div>
           <div className={css("certificate-copy")}>
             <span className={css("section-kicker")}>THÀNH QUẢ CỦA BẠN</span>
-            <h2>
-              {courseCertificates.length
-                ? "Một cột mốc đáng nhớ."
-                : "Học trọn vẹn. Nhận chứng chỉ."}
-            </h2>
+            <h2>Chứng chỉ hoàn thành</h2>
             <p>
-              {courseCertificates.length
-                ? "Chứng chỉ đã được cấp và lưu lại. Bạn có thể mở trang xác thực bất cứ lúc nào."
-                : "Hoàn thành cả hai bài học để nhận chứng chỉ tự động. Mỗi khóa học chỉ cấp một chứng chỉ."}
+              Hoàn thành cả hai bài học để nhận chứng chỉ tự động.
             </p>
-            {courseCertificates.map((certificate) => (
-              <a
-                className={css("button certificate-link")}
-                key={certificate.serialNo}
-                href={`/api/certificates/${encodeURIComponent(certificate.serialNo)}/verify`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Xem chứng chỉ <ArrowUpRight size={17} />
-              </a>
-            ))}
           </div>
           <div className={css("certificate-status")}>
-            {courseCertificates.length ? (
-              <>
-                <CheckCircle2 size={22} />
-                <strong>Đã cấp chứng chỉ</strong>
-                <small>
-                  {new Date(courseCertificates[0].issuedAt).toLocaleDateString(
-                    "vi-VN",
-                  )}
-                </small>
-              </>
-            ) : (
-              <>
-                <span>
-                  {completed}
-                  <small> / 2</small>
-                </span>
-                <small>BÀI HỌC HOÀN THÀNH</small>
-              </>
-            )}
+            <span>{completed}<small> / 2</small></span>
+            <small>BÀI HỌC HOÀN THÀNH</small>
           </div>
-        </section>
+        </section>}
 
       </div>
     </div>

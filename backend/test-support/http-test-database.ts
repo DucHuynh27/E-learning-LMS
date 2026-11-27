@@ -40,7 +40,7 @@ export async function createHttpTestDatabase(): Promise<DataSource> {
       CREATE TABLE "courses" ("id" uuid PRIMARY KEY, "instructorId" uuid NOT NULL REFERENCES "users"("id"), "status" "fixture_course_status" NOT NULL);
       CREATE TABLE "sections" ("id" uuid PRIMARY KEY, "courseId" uuid NOT NULL REFERENCES "courses"("id") ON DELETE CASCADE, "position" integer NOT NULL);
       CREATE TABLE "lessons" ("id" uuid PRIMARY KEY, "sectionId" uuid NOT NULL REFERENCES "sections"("id") ON DELETE CASCADE,
-        "position" integer NOT NULL, "durationSec" integer NOT NULL, "isPublished" boolean NOT NULL);
+        "content" text, "position" integer NOT NULL, "durationSec" integer NOT NULL, "isPublished" boolean NOT NULL);
       CREATE TABLE "enrolments" ("id" uuid PRIMARY KEY DEFAULT gen_random_uuid(), "userId" uuid NOT NULL REFERENCES "users"("id"),
         "courseId" uuid NOT NULL REFERENCES "courses"("id") ON DELETE CASCADE, "status" "fixture_enrolment_status" NOT NULL DEFAULT 'ACTIVE',
         "progressPct" integer NOT NULL DEFAULT 0, "completedAt" timestamptz, UNIQUE ("userId", "courseId"));

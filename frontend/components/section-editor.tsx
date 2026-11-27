@@ -15,6 +15,7 @@ const lessonTypes = {
 
 interface LessonFields {
   title: string;
+  content: string | null;
   type: keyof typeof lessonTypes;
   durationSec: number;
   isPublished: boolean;
@@ -198,23 +199,39 @@ function LessonForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [type, setType] = useState<LessonFields["type"]>(
+    lesson?.type ?? "ARTICLE",
+  );
+  const [content, setContent] = useState(lesson?.content ?? "");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
     const values = new FormData(event.currentTarget);
     const title = String(values.get("title")).trim();
+    const theory = String(values.get("content") ?? "").trim();
     setSaved(false);
     setError("");
     if (!title) {
       setError("Nhập tên bài học.");
       return;
     }
+    if (
+      type === "ARTICLE" &&
+      ((theory.length > 0 && theory.length < 50) ||
+        (!lesson && theory.length < 50))
+    ) {
+      setError(
+        "Phần lý thuyết cần ít nhất 50 ký tự để giải thích kiến thức trọng tâm.",
+      );
+      return;
+    }
     setBusy(true);
     try {
       await onSave({
         title,
-        type: values.get("type") as LessonFields["type"],
+        type,
+        content: type === "ARTICLE" && theory ? theory : null,
         durationSec: Number(values.get("durationSec")),
         isPublished: values.has("isPublished"),
       });
@@ -242,8 +259,11 @@ function LessonForm({
           Loại bài
           <select
             name="type"
-            defaultValue={lesson?.type ?? "ARTICLE"}
+            value={type}
             className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
+            onChange={(event) =>
+              setType(event.target.value as LessonFields["type"])
+            }
           >
             {Object.entries(lessonTypes).map(([type, label]) => (
               <option key={type} value={type}>
@@ -264,6 +284,29 @@ function LessonForm({
             defaultValue={lesson?.durationSec ?? 0}
           />
         </label>
+      </div>
+      <div hidden={type !== "ARTICLE"} className="grid gap-2">
+        <label
+          htmlFor={`lesson-theory-${lesson?.id ?? "new"}`}
+          className="text-sm font-medium"
+        >
+          Phần lý thuyết
+        </label>
+        <textarea
+          id={`lesson-theory-${lesson?.id ?? "new"}`}
+          name="content"
+          value={content}
+          required={!lesson && type === "ARTICLE"}
+          minLength={!lesson && type === "ARTICLE" ? 50 : undefined}
+          maxLength={20000}
+          className="min-h-36 rounded-lg border border-input bg-background p-3 text-sm leading-6"
+          placeholder="Giải thích khái niệm, nguyên tắc và ví dụ cần nắm trước khi thực hành."
+          onChange={(event) => setContent(event.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          {content.length}/20000 ký tự · Khuyến nghị trình bày khái niệm, ví dụ
+          và lỗi thường gặp.
+        </p>
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input

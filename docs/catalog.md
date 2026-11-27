@@ -41,9 +41,10 @@ Module Catalog & Enrolment chịu trách nhiệm quản lý toàn bộ nội dun
 | `sections/section.entity.ts` | Entity `Section`: nhóm bài học theo khóa học, quản lý vị trí `position` |
 | `sections/sections.service.ts` | Thêm, sửa, xóa section, tính toán auto-position |
 | `sections/sections.controller.ts` | Endpoints section (`/v1/courses/:courseId/sections`, `/v1/sections/:id`) |
-| `lessons/lesson.entity.ts` | Entity `Lesson`: bài học (VIDEO, ARTICLE, QUIZ), durationSec, isPublished |
+| `lessons/lesson.entity.ts` | Entity `Lesson`: bài học (VIDEO, ARTICLE, QUIZ), nội dung lý thuyết cho ARTICLE, durationSec, isPublished |
 | `lessons/lessons.service.ts` | Thêm, sửa, xóa lesson, kiểm tra quyền sở hữu và tự động tính position |
 | `lessons/lessons.controller.ts` | Endpoints lesson (`/v1/sections/:sectionId/lessons`, `/v1/lessons/:id`) |
+| `database/migrations/1795300000000-AddLessonTheory.ts` | Thêm nội dung lý thuyết tùy chọn cho bài học |
 | `enrolments/enrolment.entity.ts` | Entity `Enrolment`: ghi nhận học viên đăng ký khóa học, tiến độ hoàn thành |
 | `enrolments/enrolments.service.ts` | Đăng ký khóa học, kiểm tra điều kiện PUBLISHED, tra cứu enrolment cá nhân và theo khóa |
 | `enrolments/enrolments.controller.ts` | Endpoints enroll (`/v1/courses/:courseId/enroll`, `/v1/enrolments/me`, `/v1/courses/:courseId/enrolments`) |

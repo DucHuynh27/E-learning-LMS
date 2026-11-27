@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -13,6 +14,7 @@ import { Learning1794050000000 } from '../src/database/migrations/1794050000000-
 import { Catalog1794100000000 } from '../src/database/migrations/1794100000000-Catalog.js';
 import { CreateQnaAndNotifications1795083911581 } from '../src/database/migrations/1795083911581-CreateQnaAndNotifications.js';
 import { LinkLearningToCatalog1795200000000 } from '../src/database/migrations/1795200000000-LinkLearningToCatalog.js';
+import { AddLessonTheory1795300000000 } from '../src/database/migrations/1795300000000-AddLessonTheory.js';
 import { Role, User } from '../src/user/user.entity.js';
 
 describe('Learning with the migrated Catalog (e2e)', () => {
@@ -39,6 +41,7 @@ describe('Learning with the migrated Catalog (e2e)', () => {
         Catalog1794100000000,
         CreateQnaAndNotifications1795083911581,
         LinkLearningToCatalog1795200000000,
+        AddLessonTheory1795300000000,
       ],
     });
     await source.initialize();
@@ -68,6 +71,81 @@ describe('Learning with the migrated Catalog (e2e)', () => {
         if (admin?.isInitialized) await admin.destroy();
       }
     }
+  }, 30_000);
+
+  it('seeds substantial quizzes for every demo course idempotently', async () => {
+    const seed = await readFile(
+      new URL('../seeds/demo-catalog.sql', import.meta.url),
+      'utf8',
+    );
+    await source!.query(seed);
+
+    const theoryStats = await source!.query(`
+      SELECT count(*)::int AS article_count,
+             count(lesson."content")::int AS lessons_with_theory,
+             min(length(lesson."content"))::int AS min_content_length
+      FROM public.lessons lesson
+      JOIN public.sections section ON section."id" = lesson."sectionId"
+      JOIN public.courses course ON course."id" = section."courseId"
+      WHERE course."instructorId" = '70b790d0-f72d-4eb4-929f-d58b003afe1e'
+        AND lesson."type" = 'ARTICLE'
+    `);
+    expect(theoryStats).toMatchObject([
+      { article_count: 160, lessons_with_theory: 160 },
+    ]);
+    expect(theoryStats[0].min_content_length).toBeGreaterThan(100);
+
+    const getQuizStats = () =>
+      source!.query(`
+        SELECT count(*)::int AS quiz_count,
+               min(question_count)::int AS min_questions,
+               max(question_count)::int AS max_questions,
+               min(min_options)::int AS min_options,
+               max(max_options)::int AS max_options,
+               min(min_correct_answers)::int AS min_correct_answers,
+               max(max_correct_answers)::int AS max_correct_answers,
+               min(correct_positions)::int AS min_correct_positions
+        FROM (
+          SELECT quiz.id,
+                 count(question.id)::int AS question_count,
+                 min(option_stats.option_count)::int AS min_options,
+                 max(option_stats.option_count)::int AS max_options,
+                 min(option_stats.correct_count)::int AS min_correct_answers,
+                 max(option_stats.correct_count)::int AS max_correct_answers,
+                 count(DISTINCT option_stats.correct_position)::int AS correct_positions
+          FROM public.quizzes quiz
+          JOIN public.lessons lesson ON lesson."id" = quiz."lessonId"
+          JOIN public.sections section ON section."id" = lesson."sectionId"
+          JOIN public.courses course ON course."id" = section."courseId"
+          LEFT JOIN public.quiz_questions question ON question."quizId" = quiz.id
+          LEFT JOIN LATERAL (
+            SELECT count(*)::int AS option_count,
+                   count(*) FILTER (WHERE option_row."isCorrect")::int AS correct_count,
+                   min(option_row."position") FILTER (WHERE option_row."isCorrect")::int AS correct_position
+            FROM public.quiz_options option_row
+            WHERE option_row."questionId" = question.id
+          ) option_stats ON true
+          WHERE course."instructorId" = '70b790d0-f72d-4eb4-929f-d58b003afe1e'
+          GROUP BY quiz.id
+        ) seeded_quizzes
+      `);
+
+    const first = await getQuizStats();
+    expect(first).toEqual([
+      {
+        quiz_count: 40,
+        min_questions: 10,
+        max_questions: 13,
+        min_options: 3,
+        max_options: 3,
+        min_correct_answers: 1,
+        max_correct_answers: 1,
+        min_correct_positions: 3,
+      },
+    ]);
+
+    await source!.query(seed);
+    expect(await getQuizStats()).toEqual(first);
   }, 30_000);
 
   it('publishes real content, resumes a quiz, issues a certificate and enforces data integrity', async () => {
@@ -124,10 +202,15 @@ describe('Learning with the migrated Catalog (e2e)', () => {
       .send({
         type: 'ARTICLE',
         title: 'Read first',
+        content:
+          'A short theory section that explains the key idea before practice.',
         durationSec: 100,
         isPublished: true,
       })
       .expect(201);
+    expect(article.body.data.content).toBe(
+      'A short theory section that explains the key idea before practice.',
+    );
     const quizLesson = await server
       .post(lessons)
       .set('Authorization', teacher)
@@ -170,6 +253,22 @@ describe('Learning with the migrated Catalog (e2e)', () => {
       .post(`${course}/enroll`)
       .set('Authorization', student)
       .expect(201);
+    const enrolments = await server
+      .get('/v1/enrolments/me')
+      .set('Authorization', student)
+      .expect(200);
+    expect(enrolments.body.data.items).toMatchObject([
+      {
+        courseId,
+        progressPct: 0,
+        course: { title: 'Learning integration course', status: 'PUBLISHED' },
+      },
+    ]);
+    const peerBeforeEnrolment = await server
+      .get('/v1/enrolments/me')
+      .set('Authorization', peer)
+      .expect(200);
+    expect(peerBeforeEnrolment.body.data.items).toEqual([]);
     await server
       .get(`${quiz}/attempts/active`)
       .set('Authorization', student)

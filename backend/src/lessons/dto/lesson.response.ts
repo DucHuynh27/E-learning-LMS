@@ -4,6 +4,7 @@ export interface LessonResponse {
   id: string;
   sectionId: string;
   title: string;
+  content: string | null;
   type: LessonType;
   position: number;
   durationSec: number;
@@ -15,6 +16,7 @@ export function toLessonResponse(lesson: Lesson): LessonResponse {
     id: lesson.id,
     sectionId: lesson.sectionId,
     title: lesson.title,
+    content: lesson.content ?? null,
     type: lesson.type,
     position: lesson.position,
     durationSec: lesson.durationSec,

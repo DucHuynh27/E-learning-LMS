@@ -78,6 +78,7 @@ describe('LessonsService', () => {
       expect(lessonRepo.create).toHaveBeenCalledWith({
         sectionId: 'sec-1',
         title: 'Intro',
+        content: null,
         type: LessonType.ARTICLE,
         position: 1,
         durationSec: 0,
@@ -93,6 +94,28 @@ describe('LessonsService', () => {
         service.create('unknown', { title: 'Intro' }, mockInstructor),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('saves theory content for an article lesson', async () => {
+      vi.mocked(sectionRepo.findOne!).mockResolvedValue(createSection());
+      vi.mocked(lessonRepo.findOne!).mockResolvedValue(null);
+
+      const result = await service.create(
+        'sec-1',
+        {
+          title: 'Theory',
+          content: 'A practical explanation of the core concept.',
+          type: LessonType.ARTICLE,
+        },
+        mockInstructor,
+      );
+
+      expect(lessonRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'A practical explanation of the core concept.',
+        }),
+      );
+      expect(result.content).toBe('A practical explanation of the core concept.');
+    });
   });
 
   describe('update', () => {
@@ -107,6 +130,19 @@ describe('LessonsService', () => {
 
       expect(result.title).toBe('Updated Title');
       expect(result.durationSec).toBe(300);
+    });
+
+    it('updates theory content without changing unrelated lesson data', async () => {
+      vi.mocked(lessonRepo.findOne!).mockResolvedValue(createLesson());
+
+      const result = await service.update(
+        'les-1',
+        { content: 'Updated theory content for this lesson.' },
+        mockInstructor,
+      );
+
+      expect(result.content).toBe('Updated theory content for this lesson.');
+      expect(result.title).toBe('Lesson 1');
     });
 
     it('throws ForbiddenException if user is not course instructor', async () => {
