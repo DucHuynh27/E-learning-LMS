@@ -16,6 +16,7 @@ import { EnrolmentsModule } from './enrolments/enrolments.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { QnaModule } from './qna/qna.module.js';
 import { NotificationModule } from './notification/notification.module.js';
+import { MediaModule } from './media/media.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -43,6 +44,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     RealtimeModule,
     QnaModule,
     NotificationModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -64,6 +64,10 @@ export class EnvVars {
   @IsString() @IsNotEmpty() MINIO_ROOT_PASSWORD: string;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) MINIO_API_PORT: number;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) MINIO_CONSOLE_PORT: number;
+  @IsString() @IsNotEmpty() MINIO_ENDPOINT: string = 'http://localhost:9000';
+  @IsString() @IsNotEmpty() MINIO_REGION: string = 'us-east-1';
+  @IsString() @IsNotEmpty() MINIO_BUCKET: string = 'lms-videos';
+  @Type(() => Number) @IsInt() @Min(1) MINIO_PRESIGNED_TTL: number = 900;
 
   @IsString() @IsNotEmpty() BULL_BOARD_PASSWORD: string;
   @Type(() => Number) @IsInt() @Min(1) @Max(65535) BULL_BOARD_PORT: number;
