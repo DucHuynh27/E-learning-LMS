@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { BookOpenText, CircleHelp, Clapperboard, Plus, Sparkles } from "lucide-react";
 import { QuizEditor } from "@/components/quiz-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +9,15 @@ import { api } from "@/lib/learning-api";
 import { managementError } from "@/lib/course-authoring";
 
 const lessonTypes = {
-  ARTICLE: "Bài đọc",
+  ARTICLE: "Bài lý thuyết",
   VIDEO: "Video",
   QUIZ: "Trắc nghiệm",
+};
+
+const lessonTypeDetails = {
+  ARTICLE: "Viết nội dung, khái niệm và ví dụ cho học viên đọc.",
+  VIDEO: "Dán liên kết video để học viên xem ngay trong bài học.",
+  QUIZ: "Tạo câu hỏi và chọn đáp án đúng để chấm tự động.",
 };
 
 interface LessonFields {
@@ -120,7 +127,11 @@ export function SectionEditor({
         </p>
       )}
       {adding && (
-        <div className="rounded-lg border p-3 bg-muted/25">
+        <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-4 sm:p-5">
+          <div className="mb-4">
+            <h4 className="font-semibold">Tạo bài học mới</h4>
+            <p className="mt-1 text-sm text-muted-foreground">Chọn loại nội dung, đặt tên rồi điền phần cần thiết.</p>
+          </div>
           <LessonForm onSave={createLesson} />
         </div>
       )}
@@ -155,7 +166,7 @@ function LessonEditor({
   token: string;
   onSaved: (lesson: Lesson) => void;
 }) {
-  const [showQuiz, setShowQuiz] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(lesson.type === "QUIZ");
 
   async function save(fields: LessonFields) {
     const saved = await api<Lesson>(`/lessons/${lesson.id}`, token, {
@@ -166,7 +177,7 @@ function LessonEditor({
   }
 
   return (
-    <details className="rounded-lg border p-3">
+    <details open={lesson.type === "QUIZ"} className="rounded-lg border p-3">
       <summary className="cursor-pointer break-words text-sm font-medium">
         {lesson.title}{" "}
         <span className="text-muted-foreground">
@@ -216,23 +227,28 @@ function LessonForm({
       setError("Nhập tên bài học.");
       return;
     }
-    if (
-      type === "ARTICLE" &&
-      ((theory.length > 0 && theory.length < 50) ||
-        (!lesson && theory.length < 50))
-    ) {
-      setError(
-        "Phần lý thuyết cần ít nhất 50 ký tự để giải thích kiến thức trọng tâm.",
-      );
+    if (type === "ARTICLE" && !theory) {
+      setError("Thêm nội dung bài lý thuyết.");
       return;
+    }
+    if (type === "VIDEO") {
+      try {
+        const videoUrl = new URL(theory);
+        if (videoUrl.protocol !== "https:" && videoUrl.protocol !== "http:") {
+          throw new Error("Invalid protocol");
+        }
+      } catch {
+        setError("Nhập liên kết video hợp lệ, bắt đầu bằng https:// hoặc http://.");
+        return;
+      }
     }
     setBusy(true);
     try {
       await onSave({
         title,
         type,
-        content: type === "ARTICLE" && theory ? theory : null,
-        durationSec: Number(values.get("durationSec")),
+        content: type === "ARTICLE" || type === "VIDEO" ? theory : null,
+        durationSec: Number(values.get("durationSec")) * 60,
         isPublished: values.has("isPublished"),
       });
       setSaved(true);
@@ -244,9 +260,33 @@ function LessonForm({
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-3">
+    <form onSubmit={submit} className="grid gap-5">
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium">Loại nội dung</legend>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {Object.entries(lessonTypes).map(([value, label]) => {
+            const Icon = value === "ARTICLE" ? BookOpenText : value === "VIDEO" ? Clapperboard : CircleHelp;
+            const selected = type === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setType(value as LessonFields["type"])}
+                className="flex min-h-24 items-start gap-3 rounded-xl border p-3 text-left transition hover:border-primary/50 hover:bg-primary/[0.03] aria-pressed:border-primary aria-pressed:bg-primary/[0.07]"
+              >
+                <Icon className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+                <span>
+                  <span className="block text-sm font-semibold">{label}</span>
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">{lessonTypeDetails[value as keyof typeof lessonTypeDetails]}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
       <label className="grid gap-2 text-sm font-medium">
-        Tên bài học
+        Tên bài
         <Input
           name="title"
           required
@@ -256,32 +296,15 @@ function LessonForm({
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium">
-          Loại bài
-          <select
-            name="type"
-            value={type}
-            className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
-            onChange={(event) =>
-              setType(event.target.value as LessonFields["type"])
-            }
-          >
-            {Object.entries(lessonTypes).map(([type, label]) => (
-              <option key={type} value={type}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-2 text-sm font-medium">
-          Thời lượng dự kiến (giây)
+          Thời lượng (phút)
           <Input
             name="durationSec"
             type="number"
             required
             min={0}
-            max={2147483647}
+            max={35791394}
             step={1}
-            defaultValue={lesson?.durationSec ?? 0}
+            defaultValue={Math.ceil((lesson?.durationSec ?? 0) / 60)}
           />
         </label>
       </div>
@@ -290,24 +313,42 @@ function LessonForm({
           htmlFor={`lesson-theory-${lesson?.id ?? "new"}`}
           className="text-sm font-medium"
         >
-          Phần lý thuyết
+          Nội dung bài học
         </label>
         <textarea
           id={`lesson-theory-${lesson?.id ?? "new"}`}
           name="content"
           value={content}
-          required={!lesson && type === "ARTICLE"}
-          minLength={!lesson && type === "ARTICLE" ? 50 : undefined}
+          required={type === "ARTICLE"}
           maxLength={20000}
           className="min-h-36 rounded-lg border border-input bg-background p-3 text-sm leading-6"
-          placeholder="Giải thích khái niệm, nguyên tắc và ví dụ cần nắm trước khi thực hành."
+          placeholder="Viết nội dung bài học. Có thể thêm khái niệm, ví dụ và ghi chú cho học viên."
           onChange={(event) => setContent(event.target.value)}
         />
         <p className="text-xs text-muted-foreground">
-          {content.length}/20000 ký tự · Khuyến nghị trình bày khái niệm, ví dụ
-          và lỗi thường gặp.
+          {content.length}/20000 ký tự
         </p>
       </div>
+      {type === "VIDEO" && (
+        <label className="grid gap-2 text-sm font-medium">
+          Liên kết video
+          <Input
+            name="videoUrl"
+            type="url"
+            required
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            placeholder="https://www.youtube.com/watch?v=..."
+          />
+          <span className="font-normal text-muted-foreground">Dùng liên kết YouTube hoặc URL video MP4 công khai.</span>
+        </label>
+      )}
+      {type === "QUIZ" && (
+        <div className="flex gap-3 rounded-xl border bg-muted/30 p-4 text-sm">
+          <Sparkles className="size-5 shrink-0 text-primary" aria-hidden="true" />
+          <p>Sau khi thêm bài, mở mục <strong>Soạn câu hỏi</strong> để viết câu hỏi và đánh dấu đáp án đúng.</p>
+        </div>
+      )}
       <label className="flex items-center gap-2 text-sm">
         <input
           name="isPublished"
@@ -329,11 +370,10 @@ function LessonForm({
       )}
       <Button
         type="submit"
-        variant="outline"
         className="justify-self-start"
         disabled={busy}
       >
-        {busy ? "Đang lưu…" : lesson ? "Lưu bài học" : "Thêm bài học"}
+        {busy ? "Đang lưu…" : lesson ? "Lưu bài học" : <><Plus className="size-4" /> Thêm bài học</>}
       </Button>
     </form>
   );

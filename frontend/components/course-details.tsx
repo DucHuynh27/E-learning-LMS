@@ -40,6 +40,24 @@ interface CourseTracking {
   certificate?: Certificate;
 }
 
+function videoSource(value: string | null) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.hostname === "youtu.be") {
+      const id = url.pathname.slice(1);
+      return id ? { kind: "youtube" as const, src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` } : null;
+    }
+    if (url.hostname === "www.youtube.com" || url.hostname === "youtube.com" || url.hostname === "m.youtube.com") {
+      const id = url.pathname === "/watch" ? url.searchParams.get("v") : url.pathname.startsWith("/embed/") ? url.pathname.split("/")[2] : null;
+      return id ? { kind: "youtube" as const, src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` } : null;
+    }
+    return /\.mp4$/i.test(url.pathname) ? { kind: "file" as const, src: url.href } : null;
+  } catch {
+    return null;
+  }
+}
+
 async function readTracking(
   courseId: string,
   token: string,
@@ -276,6 +294,7 @@ function CourseDetailContent({
             <div className="flex flex-col gap-5 bg-linear-to-br from-primary/10 via-card to-card p-5 sm:flex-row sm:items-center sm:p-7">
               <CourseLogo
                 title={course.title}
+                imageUrl={course.thumbnailKey}
                 className="w-28 shrink-0 sm:w-36"
               />
               <div className="min-w-0">
@@ -425,6 +444,8 @@ function CourseDetailContent({
                               Trắc nghiệm
                             </span>
                           )}
+                          {lesson.type === "ARTICLE" && <span className="rounded-md bg-muted px-2 py-0.5 text-xs">Lý thuyết</span>}
+                          {lesson.type === "VIDEO" && <span className="rounded-md bg-muted px-2 py-0.5 text-xs">Video</span>}
                           {lesson.durationSec > 0 && (
                             <span className="text-xs text-muted-foreground">
                               {Math.ceil(lesson.durationSec / 60)} phút
@@ -461,6 +482,26 @@ function CourseDetailContent({
                                 "Giảng viên chưa cập nhật nội dung lý thuyết cho bài học này."}
                             </p>
                           </section>
+                        )}
+                        {lesson.type === "VIDEO" && (
+                          <div className="mt-4 overflow-hidden rounded-xl bg-black">
+                            {videoSource(lesson.content)?.kind === "youtube" ? (
+                              <iframe
+                                className="aspect-video w-full"
+                                src={videoSource(lesson.content)?.src}
+                                title={lesson.title}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                referrerPolicy="strict-origin-when-cross-origin"
+                                allowFullScreen
+                              />
+                            ) : videoSource(lesson.content)?.kind === "file" ? (
+                              <video className="aspect-video w-full" controls preload="metadata" src={videoSource(lesson.content)?.src}>
+                                Trình duyệt không hỗ trợ phát video.
+                              </video>
+                            ) : (
+                              <p className="p-4 text-sm text-white">Video chưa có liên kết hợp lệ.</p>
+                            )}
+                          </div>
                         )}
                         {lesson.type === "QUIZ" && tracking && (
                           <CourseQuiz lessonId={lesson.id} session={session} />

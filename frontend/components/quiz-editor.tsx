@@ -147,10 +147,8 @@ function QuizForm({
       setError("Điền nội dung cho tất cả câu hỏi và lựa chọn.");
       return;
     }
-    if (payload.some((question) => question.content.length < 30)) {
-      setError(
-        "Mỗi câu hỏi cần ít nhất 30 ký tự để nêu rõ bối cảnh và yêu cầu đánh giá.",
-      );
+    if (payload.some((question) => question.content.length < 5)) {
+      setError("Mỗi câu hỏi cần ít nhất 5 ký tự.");
       return;
     }
     if (
@@ -220,9 +218,7 @@ function QuizForm({
       <div>
         <h4 className="font-semibold">Câu hỏi trắc nghiệm</h4>
         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-          Xây dựng câu hỏi theo mục tiêu học tập: nêu bối cảnh cụ thể, đặt một
-          yêu cầu đánh giá rõ ràng và dùng các phương án nhiễu hợp lý. Mỗi câu
-          hỏi cần có ít nhất 30 ký tự; tránh câu hỏi chỉ yêu cầu ghi nhớ máy móc.
+          Nhập câu hỏi, điền các lựa chọn và chọn đáp án đúng. Có thể thêm nhiều câu trong cùng bài.
         </p>
       </div>
       {locked && (
@@ -267,7 +263,7 @@ function QuizForm({
               Nội dung câu hỏi ({question.content.length}/5000)
               <textarea
                 required
-                minLength={30}
+                minLength={5}
                 maxLength={5000}
                 className="min-h-24 rounded-lg border border-input bg-background p-3 text-sm leading-6"
                 value={question.content}

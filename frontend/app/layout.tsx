@@ -8,7 +8,7 @@ import { SessionProvider } from "@/components/session-provider";
 const beVietnam = Be_Vietnam_Pro({
   variable: "--font-lms",
   subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {

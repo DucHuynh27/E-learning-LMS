@@ -96,6 +96,7 @@ try {
       'Học viên demo',
       Role.STUDENT,
     );
+    await account('admin@lms.demo', 'Quản trị viên demo', Role.ADMIN);
     const course = [
       courseId,
       teacher.userId,

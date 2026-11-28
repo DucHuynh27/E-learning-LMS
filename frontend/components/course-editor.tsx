@@ -29,6 +29,7 @@ export interface CourseFields {
   title: string;
   description: string;
   priceCents: number;
+  thumbnailKey: string | null;
   slug?: string;
 }
 
@@ -43,6 +44,9 @@ export function CourseForm({
   const [error, setError] = useState("");
   const [title, setTitle] = useState(course?.title ?? "");
   const [description, setDescription] = useState(course?.description ?? "");
+  const [thumbnailUrl, setThumbnailUrl] = useState(
+    course?.thumbnailKey?.startsWith("http") ? course.thumbnailKey : "",
+  );
   const [paid, setPaid] = useState((course?.priceCents ?? 0) > 0);
   const [priceInput, setPriceInput] = useState(
     course?.priceCents ? String(course.priceCents) : "",
@@ -63,6 +67,15 @@ export function CourseForm({
       setError("Nhập slug cho khóa học.");
       return;
     }
+    if (thumbnailUrl) {
+      try {
+        const imageUrl = new URL(thumbnailUrl);
+        if (imageUrl.protocol !== "https:" && imageUrl.protocol !== "http:") throw new Error();
+      } catch {
+        setError("Nhập liên kết ảnh hợp lệ, bắt đầu bằng https:// hoặc http://.");
+        return;
+      }
+    }
     if (
       paid &&
       (!Number.isSafeInteger(priceCents) || priceCents <= 0)
@@ -77,6 +90,7 @@ export function CourseForm({
         title,
         description: String(fields.get("description")).trim(),
         priceCents,
+        thumbnailKey: thumbnailUrl.trim() || null,
         slug,
       });
     } catch (error) {
@@ -91,15 +105,27 @@ export function CourseForm({
       <div className="flex items-center gap-4 rounded-lg border bg-muted/25 p-4">
         <CourseLogo
           title={title.trim() || "Khóa học mới"}
+          imageUrl={thumbnailUrl}
           className="w-16 shrink-0"
         />
         <div>
-          <p className="font-medium">Nhận diện khóa học</p>
+          <p className="font-medium">Ảnh bìa khóa học</p>
           <p className="text-sm text-muted-foreground">
-            Logo monogram được tạo tự động từ tên khóa học.
+            Ảnh được tự chọn theo tên khóa học; bạn có thể thay bằng ảnh riêng.
           </p>
         </div>
       </div>
+      <label className="grid gap-2 text-sm font-medium">
+        Ảnh riêng (không bắt buộc)
+        <Input
+          name="thumbnailKey"
+          type="url"
+          value={thumbnailUrl}
+          onChange={(event) => setThumbnailUrl(event.target.value)}
+          placeholder="https://example.com/anh-khoa-hoc.jpg"
+        />
+        <span className="font-normal text-muted-foreground">Bỏ trống để dùng logo thương hiệu tự nhận diện hoặc ảnh chủ đề phù hợp.</span>
+      </label>
       <label className="grid gap-2 text-sm font-medium">
         Tên khóa học
         <Input
@@ -384,15 +410,22 @@ export function CourseEditor({
       </section>
 
       <section className="site-panel space-y-4 p-5 sm:p-6">
-        <h2 className="text-xl font-semibold">Chương và bài học</h2>
-        <p className="text-sm text-muted-foreground">
-          {course.sections.length} chương ·{" "}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Bước 2 · Nội dung khóa học</p>
+          <h2 className="mt-1 text-xl font-semibold">Chương và bài học</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Chia nội dung thành chương, sau đó thêm bài lý thuyết, video hoặc trắc nghiệm.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-muted px-3 py-1.5">{course.sections.length} chương</span>
+          <span className="rounded-full bg-muted px-3 py-1.5">
           {course.sections.reduce(
             (total, section) => total + section.lessons.length,
             0,
-          )}{" "}
-          bài học
-        </p>
+          )} bài học
+          </span>
+        </div>
         <form
           className="flex flex-wrap items-end gap-2"
           onSubmit={(event) =>
@@ -401,7 +434,7 @@ export function CourseEditor({
         >
           <label className="grid min-w-48 flex-1 gap-2 text-sm font-medium">
             Tên chương
-            <Input name="title" required maxLength={200} disabled={busy} />
+            <Input name="title" required maxLength={200} disabled={busy} placeholder="Ví dụ: Bắt đầu với khóa học" />
           </label>
           <Button type="submit" variant="outline" disabled={busy}>
             Thêm chương

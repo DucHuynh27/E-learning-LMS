@@ -33,6 +33,11 @@ export function SiteHeader() {
               Quản lý
             </Link>
           )}
+          {session?.user.role === "ADMIN" && (
+            <Link className="py-1 text-muted-foreground hover:text-primary" href="/admin/users">
+              Người dùng
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-2">

@@ -9,6 +9,10 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-lms);
   --font-heading: var(--font-lms);
+  --font-weight-semibold: 500;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -126,6 +130,26 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-lms), sans-serif;
+    font-weight: 400;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 600;
+  }
+  strong,
+  b {
+    font-weight: 500;
   }
 }
 
@@ -143,7 +167,7 @@
 
   .site-title {
     font-size: var(--site-title-size);
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.2;
     letter-spacing: -0.035em;
   }

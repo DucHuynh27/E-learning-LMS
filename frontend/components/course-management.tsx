@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BookOpen, Pencil, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSession } from "@/components/session-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -70,6 +71,7 @@ function ManagementWorkspace({
   const [page, setPage] = useState(1);
   const [revision, setRevision] = useState(0);
   const [selectedId, setSelectedId] = useState<string>();
+  const [adding, setAdding] = useState(false);
   const [result, setResult] = useState<{
     page: number;
     revision: number;
@@ -103,6 +105,7 @@ function ManagementWorkspace({
     });
     setPage(1);
     setSelectedId(course.id);
+    setAdding(false);
     reload();
   }
 
@@ -118,7 +121,8 @@ function ManagementWorkspace({
           <h2 className="text-lg font-semibold">
             {admin ? "Tất cả khóa học" : "Khóa học của bạn"}
           </h2>
-          <Button variant="outline" onClick={() => setSelectedId(undefined)}>
+          <Button type="button" onClick={() => { setSelectedId(undefined); setAdding(true); }}>
+            <Plus className="size-4" aria-hidden="true" />
             Thêm khóa học
           </Button>
         </div>
@@ -143,22 +147,23 @@ function ManagementWorkspace({
           </p>
         )}
         {data && (
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {data.items.map((course) => (
-              <li key={course.id}>
-                <button
-                  type="button"
-                  aria-pressed={selectedId === course.id}
-                  className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted aria-pressed:bg-primary/10"
-                  onClick={() => setSelectedId(course.id)}
-                >
-                  <span className="block break-words text-sm font-medium">
-                    {course.title}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {courseStatuses[course.status]}
-                  </span>
-                </button>
+              <li key={course.id} className={`rounded-xl border p-3 ${selectedId === course.id ? "border-primary/40 bg-primary/[0.04]" : "border-border"}`}>
+                <p className="break-words text-sm font-semibold">{course.title}</p>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">{courseStatuses[course.status]}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={selectedId === course.id ? "default" : "outline"}
+                    aria-label={`Chỉnh sửa khóa học ${course.title}`}
+                    onClick={() => { setSelectedId(course.id); setAdding(false); }}
+                  >
+                    <Pencil className="size-3.5" aria-hidden="true" />
+                    Chỉnh sửa
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -196,10 +201,23 @@ function ManagementWorkspace({
           token={token}
           onCourseChanged={reload}
         />
-      ) : (
+      ) : adding ? (
         <div className="site-panel space-y-4 p-5 sm:p-6">
-          <h2 className="text-xl font-semibold">Thêm khóa học</h2>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Bước 1 · Thông tin cơ bản</p>
+            <h2 className="mt-1 text-xl font-semibold">Tạo khóa học mới</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Nhập tên và mô tả. Bạn có thể thêm chương, bài học và câu hỏi tiếp theo.</p>
+          </div>
           <CourseForm onSave={create} />
+        </div>
+      ) : (
+        <div className="site-panel flex min-h-64 flex-col items-start justify-center gap-4 p-6 sm:p-8">
+          <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><BookOpen aria-hidden="true" /></span>
+          <div>
+            <h2 className="text-xl font-semibold">Bắt đầu quản lý khóa học</h2>
+            <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">Tạo khóa học mới hoặc chọn một khóa ở danh sách để chỉnh sửa thông tin, chương và bài học.</p>
+          </div>
+          <Button type="button" onClick={() => setAdding(true)}><Plus className="size-4" aria-hidden="true" />Tạo khóa học</Button>
         </div>
       )}
     </div>

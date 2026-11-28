@@ -155,6 +155,7 @@ export function CourseCatalog() {
                 <div className="flex items-start justify-between gap-4 bg-muted/35 p-5">
                   <CourseLogo
                     title={course.title}
+                    imageUrl={course.thumbnailKey}
                     className="w-24 shrink-0 sm:w-28"
                   />
                   <span
