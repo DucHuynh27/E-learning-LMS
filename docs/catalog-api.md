@@ -30,7 +30,7 @@
 | --- | --- | --- |
 | `Course` | `title`, `slug`, `description?`, `thumbnailKey?`, `priceCents`, `status` (DRAFT/PUBLISHED/ARCHIVED), `instructorId` | `slug` unique · index `(instructorId)` · `(status, createdAt)` |
 | `Section` | `courseId`, `title`, `position` | unique `(courseId, position)` · FK cascade |
-| `Lesson` | `sectionId`, `title`, `type` (VIDEO/ARTICLE/QUIZ), `position`, `durationSec`, `isPublished` | unique `(sectionId, position)` · FK cascade |
+| `Lesson` | `sectionId`, `title`, `content?` (lý thuyết cho ARTICLE), `type` (VIDEO/ARTICLE/QUIZ), `position`, `durationSec`, `isPublished` | unique `(sectionId, position)` · FK cascade |
 | `Enrolment` | `userId`, `courseId`, `status` (ACTIVE/COMPLETED/EXPIRED), `progressPct`, `enrolledAt`, `completedAt?` | unique `(userId, courseId)` · index `(courseId, status)` |
 
 > `slug` sinh tự động từ `title` khi tạo; có thể sửa qua PATCH; phải unique.
@@ -72,16 +72,16 @@
 
 **CreateSectionDto**: `title` string 1..200 (bắt buộc) · `position` int ≥ 0 (tuỳ chọn; mặc định = cuối danh sách).
 
-**CreateLessonDto**: `title` string 1..200 · `type?` enum VIDEO/ARTICLE/QUIZ (mặc định ARTICLE) · `position?` int ≥ 0 · `durationSec?` int ≥ 0 (mặc định 0) · `isPublished?` boolean (mặc định false).
+**CreateLessonDto**: `title` string 1..200 · `content?` string/null ≤ 20.000 ký tự (lý thuyết cho ARTICLE) · `type?` enum VIDEO/ARTICLE/QUIZ (mặc định ARTICLE) · `position?` int ≥ 0 · `durationSec?` int ≥ 0 (mặc định 0) · `isPublished?` boolean (mặc định false).
 
-**Update\*Dto**: như bản Create nhưng **mọi field tuỳ chọn** (dùng `PartialType` của `@nestjs/mapped-types`).
+`UpdateLessonDto` cho phép gửi `content: null` để xóa lý thuyết; các trường khác là tùy chọn.
 
 ## 6. Response shapes (field public)
 
 ```
 CourseResponse   { id, title, slug, description, priceCents, status, thumbnailKey, instructorId, createdAt, updatedAt }
 SectionResponse  { id, courseId, title, position }
-LessonResponse   { id, sectionId, title, type, position, durationSec, isPublished }
+LessonResponse   { id, sectionId, title, content, type, position, durationSec, isPublished }
 EnrolmentResponse{ id, courseId, userId, status, progressPct, enrolledAt, completedAt }
 
 CourseDetailResponse = CourseResponse + { sections: (SectionResponse & { lessons: LessonResponse[] })[] }

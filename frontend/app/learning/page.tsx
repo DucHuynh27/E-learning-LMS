@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
-import { LearningDashboard } from "@/components/learning-dashboard";
-import styles from "@/components/learning-dashboard.module.css";
+import { Suspense } from "react";
+import { MyLearning } from "@/components/my-learning";
+import { Heading } from "@/components/heading";
 
 export const metadata: Metadata = {
-  title: "Learning Space · E-Learning LMS",
+  title: "Khóa học của tôi · E-Learning LMS",
   description: "Theo dõi tiến độ, làm quiz và xem chứng chỉ.",
 };
 
 export default function LearningPage() {
   return (
-    <div className={styles.page}>
-      <LearningDashboard />
-    </div>
+    <section className="site-container site-content">
+      <Heading className="mb-6">Khóa học của tôi</Heading>
+      <Suspense fallback={<p role="status">Đang tải khóa học đã ghi danh…</p>}>
+        <MyLearning />
+      </Suspense>
+    </section>
   );
 }

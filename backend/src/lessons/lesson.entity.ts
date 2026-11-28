@@ -35,6 +35,9 @@ export class Lesson {
   @Column({ type: 'varchar', length: 200 })
   title: string;
 
+  @Column({ type: 'text', nullable: true })
+  content?: string | null;
+
   @Column({ type: 'enum', enum: LessonType, default: LessonType.ARTICLE })
   type: LessonType;
 

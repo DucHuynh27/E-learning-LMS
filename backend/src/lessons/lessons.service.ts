@@ -50,6 +50,7 @@ export class LessonsService {
     const lesson = this.lessonRepo.create({
       sectionId,
       title: dto.title,
+      content: dto.content ?? null,
       type: dto.type ?? LessonType.ARTICLE,
       position,
       durationSec: dto.durationSec ?? 0,
@@ -77,6 +78,7 @@ export class LessonsService {
     this.assertOwner(lesson.section.course.instructorId, user);
 
     if (dto.title !== undefined) lesson.title = dto.title;
+    if (dto.content !== undefined) lesson.content = dto.content;
     if (dto.type !== undefined) lesson.type = dto.type;
     if (dto.position !== undefined) lesson.position = dto.position;
     if (dto.durationSec !== undefined) lesson.durationSec = dto.durationSec;

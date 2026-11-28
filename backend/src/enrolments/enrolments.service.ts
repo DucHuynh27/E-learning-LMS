@@ -75,6 +75,7 @@ export class EnrolmentsService {
 
     const [items, total] = await this.enrolmentRepo.findAndCount({
       where: { userId: user.userId },
+      relations: { course: true },
       order: { enrolledAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,

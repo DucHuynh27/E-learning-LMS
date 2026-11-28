@@ -10,7 +10,7 @@ Các tên bảng/cột dưới đây được đọc/ghi bởi `backend/src/lear
 | --- | --- |
 | `courses` | `id` UUID, `instructorId` UUID, `status` có `PUBLISHED` |
 | `sections` | `id` UUID, `courseId` UUID, `position` integer |
-| `lessons` | `id` UUID, `sectionId` UUID, `position` integer, `durationSec` integer không âm, `isPublished` boolean |
+| `lessons` | `id` UUID, `sectionId` UUID, `content` text nullable cho lý thuyết bài đọc, `position` integer, `durationSec` integer không âm, `isPublished` boolean |
 | `enrolments` | `id` UUID, `userId` UUID, `courseId` UUID, `status` có `ACTIVE`/`COMPLETED`/`EXPIRED`, `progressPct` integer, `completedAt` timestamptz nullable |
 
 Enrolment cần unique `(userId, courseId)` để mỗi user/course có đúng một bản ghi khoá khi cập nhật tiến độ. Index unique theo vị trí Section/Lesson trong contract Catalog hỗ trợ truy vấn theo course. Media cần đồng bộ duration vào Lesson khi video sẵn sàng; Learning hiện dùng `lesson.durationSec` theo spec.
