@@ -3,3 +3,5 @@
 # esbuild cần postinstall để cài binary — thiếu khai báo này, CI sẽ fail với ERR_PNPM_IGNORED_BUILDS.
 allowBuilds:
   esbuild: true
+  ffmpeg-static: true
+  msgpackr-extract: true

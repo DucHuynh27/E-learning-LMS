@@ -1,0 +1,128 @@
+import {
+  CreateBucketCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Readable } from 'node:stream';
+
+@Injectable()
+export class S3Service implements OnModuleInit, OnModuleDestroy {
+  readonly bucket: string;
+  readonly presignedTtl: number;
+  private readonly logger = new Logger(S3Service.name);
+  private readonly client: S3Client;
+  private bucketReady = false;
+
+  constructor(private readonly config: ConfigService) {
+    this.bucket = this.config.getOrThrow<string>('MINIO_BUCKET');
+    this.presignedTtl = Number(
+      this.config.getOrThrow<number>('MINIO_PRESIGNED_TTL'),
+    );
+    this.client = new S3Client({
+      endpoint: this.config.getOrThrow<string>('MINIO_ENDPOINT'),
+      region: this.config.getOrThrow<string>('MINIO_REGION'),
+      credentials: {
+        accessKeyId: this.config.getOrThrow<string>('MINIO_ROOT_USER'),
+        secretAccessKey: this.config.getOrThrow<string>('MINIO_ROOT_PASSWORD'),
+      },
+      forcePathStyle: true,
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+    });
+  }
+
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.ensureBucket();
+    } catch (error) {
+      // Cho phép app khởi động khi MinIO chưa chạy (ví dụ CI e2e chỉ bật Postgres).
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`MinIO chưa sẵn sàng khi khởi động: ${message}`);
+    }
+  }
+
+  private async ensureBucket(): Promise<void> {
+    if (this.bucketReady) return;
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+    } catch (error) {
+      const status = (error as { $metadata?: { httpStatusCode?: number } })
+        .$metadata?.httpStatusCode;
+      if (status !== 404) throw error;
+      await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+    }
+    this.bucketReady = true;
+  }
+
+  onModuleDestroy(): void {
+    this.client.destroy();
+  }
+
+  async createUploadUrl(key: string, contentType: string) {
+    await this.ensureBucket();
+    return getSignedUrl(
+      this.client,
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ContentType: contentType,
+      }),
+      { expiresIn: this.presignedTtl },
+    );
+  }
+
+  createPlaybackUrl(key: string) {
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      { expiresIn: this.presignedTtl },
+    );
+  }
+
+  async assertObjectExists(key: string): Promise<void> {
+    try {
+      await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+    } catch (error) {
+      const status = (error as { $metadata?: { httpStatusCode?: number } })
+        .$metadata?.httpStatusCode;
+      if (status === 404)
+        throw new NotFoundException('Uploaded object not found');
+      throw error;
+    }
+  }
+
+  async downloadObject(key: string): Promise<Readable> {
+    const result = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    if (!(result.Body instanceof Readable)) {
+      throw new Error(`Object ${key} did not return a readable stream`);
+    }
+    return result.Body;
+  }
+
+  async uploadThumbnail(key: string, body: Buffer): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: 'image/jpeg',
+      }),
+    );
+  }
+}
