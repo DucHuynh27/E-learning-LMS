@@ -31,20 +31,22 @@ describe('Progress read semantics', () => {
       `INSERT INTO users (id, email, "passwordHash", "fullName") VALUES ($1, $2, 'unused', 'Reader')`,
       [user.userId, user.email],
     );
-    await source.query(`INSERT INTO courses VALUES ($1, $2, 'PUBLISHED')`, [
-      courseId,
-      user.userId,
-    ]);
+    await source.query(
+      `INSERT INTO courses (id, title, slug, "instructorId", status)
+       VALUES ($1, 'Progress test course', $2, $3, 'PUBLISHED')`,
+      [courseId, `progress-${courseId}`, user.userId],
+    );
     const sectionId = randomUUID();
     await source.query('INSERT INTO sections VALUES ($1, $2, 0)', [
       sectionId,
       courseId,
     ]);
     const lessonId = randomUUID();
-    await source.query('INSERT INTO lessons VALUES ($1, $2, 0, 100, true)', [
-      lessonId,
-      sectionId,
-    ]);
+    await source.query(
+      `INSERT INTO lessons (id, "sectionId", content, position, "durationSec", "isPublished")
+       VALUES ($1, $2, NULL, 0, 100, true)`,
+      [lessonId, sectionId],
+    );
     await source.query(
       'INSERT INTO enrolments ("userId", "courseId") VALUES ($1, $2)',
       [user.userId, courseId],
